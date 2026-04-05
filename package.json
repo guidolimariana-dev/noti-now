@@ -27,6 +27,7 @@
 		"tailwindcss": "^4.1.18"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260405.1",
 		"@tanstack/devtools-vite": "^0.3.11",
 		"@tanstack/react-devtools": "^0.7.0",
 		"@tanstack/react-router-devtools": "^1.132.0",
