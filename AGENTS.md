@@ -150,3 +150,14 @@ Use the example above to generate the component code and adapt the resources to 
 
 The <App> component is located at `/src/app/App.tsx` .
 The resource components, for example <Todo>, are located at `/src/app/Todo.tsx` . Within every resource definition file, there are the corresponding list, edit, create and show components, which are then used with the <Resource> component.
+
+## Project directories
+
+- `/src/app` contains components specific for the Shadcn Admin Kit app.
+- `/src/components` contains the out of the box components from Shadcn and Shadcn Admin Kit libraries. This is not expected to receive many changes.
+- `/src/db` contains code related to Drizzle schema and related code.
+- `/src/hooks` contains code related to TanStack hooks.
+- `/src/lib` contains utils code.
+- `/src/providers` contains code that complements Shadcn Admin Kit with custom providers, like accesing the D1 database and the authentication provider.
+- `/src/routes` contains basic routes for TanStack.
+- `/src/server` contains TanStack server functions that complement the Shadcn Admin Kit custom providers.
