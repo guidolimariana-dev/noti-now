@@ -12,6 +12,10 @@
    - Bun as npm replacement, as it supports Typescript out of the box.
    - Context7 as the MCP server for up to date documentation for the technology stack.
 
+## Dev environment tips
+   - Use `bunx drizzle-kit generate --name <name>` to create a migration after having updated the Drizzle schema.ts file. Ask the user which name to use for the migration.
+   - Use `bunx drizzle-kit generate --custom --name <name>` to create a custom migration, which allows the user to write custom SQL sentences. Ask the user which name to use for the migration.
+
 ## Rules for Using shadcn MCP server
 
 1. **Always Check Registry First**
