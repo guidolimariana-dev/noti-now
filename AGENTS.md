@@ -147,3 +147,6 @@ export const App = () => (
 ```
 
 Use the example above to generate the component code and adapt the resources to your needs.
+
+The <App> component is located at `/src/app/App.tsx` .
+The resource components, for example <Todo>, are located at `/src/app/Todo.tsx` . Within every resource definition file, there are the corresponding list, edit, create and show components, which are then used with the <Resource> component.
