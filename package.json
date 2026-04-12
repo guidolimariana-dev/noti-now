@@ -6,7 +6,7 @@
 		"#/*": "./src/*"
 	},
 	"scripts": {
-		"dev": "vite dev --port 3000",
+		"dev": "bunx wrangler d1 migrations apply base_admin --local && vite dev --port 3000",
 		"build": "vite build",
 		"preview": "bun run build && vite preview",
 		"test": "vitest run",
