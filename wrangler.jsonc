@@ -14,11 +14,14 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	"vars": {
+		"BETTER_AUTH_URL": "http://localhost:3000"
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "base_admin",
-			"database_id": "88e4dd7f-5048-454f-a912-56deefd6f079",
+			// "database_id": "88e4dd7f-5048-454f-a912-56deefd6f079",
       "migrations_dir": "./drizzle/migrations"
 		}
 	]

@@ -1,6 +1,38 @@
-Welcome to your new TanStack Start app! 
+# Pasos a seguir 
 
-# Getting Started
+Este proyecto fue creado con:
+`bun create cloudflare@latest`
+
+La base de datos fue creada con:
+`bunx wrangler d1 create base_admin`
+
+`bun run cf-typegen`
+
+La autenticación está implementada con Better-Auth.
+
+Se deben definir variables de entorno en los archivos `wrangler.jsonc` y `.dev.vars`.
+
+El schema de base de datos para autenticación fue creado con:
+`bun x auth@latest generate --config ./src/lib/auth.ts --output ./src/db/schema.ts --adapter drizzle --dialect sqlite`
+
+Las migraciones de base de datos se gestionan con:
+`bunx drizzle-kit generate --name "Better-Auth"`
+
+`bunx drizzle-kit generate --name "Todos"`
+
+`bunx drizzle-kit generate --custom --name "Datos minimos"`
+
+Las migraciones se ejecutan automaticamente al iniciar el sistema localmente ejecutando:
+`bun run dev`
+
+Para definir las credenciales del usuario admin inicial, ejecutar:
+`bun run db:seed-admin`
+
+## Variables de entorno
+- `BETTER_AUTH_SECRET` (en archivo .dev.vars)
+- `BETTER_AUTH_URL` (en archivo wrangler.jsonc)
+
+# Getting Started - TanStack Start app
 
 To run this application:
 
@@ -191,11 +223,3 @@ Files prefixed with `demo` can be safely deleted. They are there to provide a st
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
 
 For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
-
-# Executed commands
-`bun create cloudflare@latest`
-`bunx wrangler d1 create base_admin`
-`bun run cf-typegen`
-`bunx drizzle-kit generate --name "Inicial"`
-`bunx drizzle-kit generate --custom --name "Datos minimos"`
-`bunx wrangler d1 migrations apply base_admin --local`

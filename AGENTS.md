@@ -15,7 +15,8 @@
 ## Dev environment tips
    - Use `bunx drizzle-kit generate --name <name>` to create a migration after having updated the Drizzle schema.ts file. Ask the user which name to use for the migration.
    - Use `bunx drizzle-kit generate --custom --name <name>` to create a custom migration, which allows the user to write custom SQL sentences. Ask the user which name to use for the migration.
-   - Whenever possible, don't make changes directly to files like package.json or schema.ts or Drizzle migrations if the corresponding library has available a command line to do so. Ask the user in case you have both alternatives, to identify which one suits better. 
+   - Whenever possible, don't make changes directly to files like package.json or schema.ts or Drizzle migrations if the corresponding library has available a command line to do so. Ask the user in case you have both alternatives, to identify which one suits better.
+   - Don't make changes to the `/src/components/*` files without checking with the user first.
 
 ## Rules for Using shadcn MCP server
 
@@ -155,7 +156,7 @@ The resource components, for example <Todo>, are located at `/src/app/Todo.tsx` 
 ## Project directories
 
 - `/src/app` contains components specific for the Shadcn Admin Kit app.
-- `/src/components` contains the out of the box components from Shadcn and Shadcn Admin Kit libraries. This is not expected to receive many changes.
+- `/src/components` contains the out of the box components from Shadcn and Shadcn Admin Kit libraries. This is not expected to receive changes without checking the user first.
 - `/src/db` contains code related to Drizzle schema and related code.
 - `/src/hooks` contains code related to TanStack hooks.
 - `/src/lib` contains utils code.
