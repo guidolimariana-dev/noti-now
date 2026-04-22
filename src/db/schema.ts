@@ -112,9 +112,3 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
-
-export const todos = sqliteTable("todos", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  descripcion: text().notNull(),
-  completo: integer({ mode: 'boolean' }).notNull().default(false),
-});

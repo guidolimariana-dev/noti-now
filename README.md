@@ -18,7 +18,7 @@ El schema de base de datos para autenticación fue creado con:
 Las migraciones de base de datos se gestionan con:
 `bunx drizzle-kit generate --name "Better-Auth"`
 
-`bunx drizzle-kit generate --name "Todos"`
+`bunx drizzle-kit generate --name <name>`
 
 `bunx drizzle-kit generate --custom --name "Datos minimos"`
 
