@@ -22,6 +22,13 @@
       "when": 1776892996459,
       "tag": "0002_delete_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776896462209,
+      "tag": "0003_add_recorrido",
+      "breakpoints": true
     }
   ]
 }

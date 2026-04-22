@@ -3,11 +3,14 @@ import { Admin, ListGuesser, ShowGuesser, LoginPage } from '@/components/admin'
 import { Resource } from 'ra-core'
 import { dataProvider } from '@/providers/d1DataProvider'
 import { authProvider } from '@/providers/authProvider'
+import { RecorridoList, RecorridoCreate, RecorridoEdit, RecorridoShow } from './Recorrido'
 
 export function App() {
   return (
     //@ts-ignore
     <Admin routerProvider={tanStackRouterProvider} dataProvider={dataProvider} authProvider={authProvider} loginPage={LoginPage}>
+      <Resource name="recorrido" list={RecorridoList} create={RecorridoCreate} edit={RecorridoEdit} show={RecorridoShow} 
+      />
     </Admin>
   );
 }
