@@ -19,7 +19,18 @@ import {
 
 export const RecorridoList = () => (
   <List
-    filters={[<TextInput source="q" label="Buscar" alwaysOn />]}
+    filters={[
+      <TextInput source="q" label="Buscar" alwaysOn />,
+      <SelectInput
+        source="estado"
+        label="Estado"
+        choices={[
+          { id: 'Activo', name: 'Activo' },
+          { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
+        ]}
+        alwaysOn
+      />,
+    ]}
     actions={
       <div className="flex items-center gap-2">
         <CreateButton />

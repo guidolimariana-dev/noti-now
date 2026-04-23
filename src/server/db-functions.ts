@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { env } from 'cloudflare:workers'
 import { getDb } from '@/db'
 import * as schema from '@/db/schema'
-import { eq, sql, asc, desc, inArray, and } from 'drizzle-orm'
+import { eq, sql, asc, desc, inArray, and, or, like } from 'drizzle-orm'
 
 const getTable = (resource: string): any => {
   // @ts-ignore
@@ -19,9 +19,34 @@ export const getListFn = createServerFn({ method: 'GET' })
     const { page, perPage } = params.pagination
     const { field, order } = params.sort
 
-    const filters = Object.entries(params.filter).map(([key, value]) => 
-      eq(table[key], value)
-    )
+    const filters = Object.entries(params.filter).map(([key, value]) => {
+      if (key === 'q') {
+        return undefined; // Handled separately
+      }
+      return eq(table[key], value)
+    }).filter(Boolean)
+
+    if (params.filter.q) {
+      const searchQuery = String(params.filter.q);
+      const numericSearch = Number(searchQuery);
+
+      const searchConditions = [];
+
+      // Search by codigo if q is a valid number
+      if (!isNaN(numericSearch)) {
+        searchConditions.push(eq(table.codigo, numericSearch));
+      }
+
+      // Search by nombre (case-insensitive and accent-insensitive)
+      // Note: SQLite's lower() handles basic case-insensitivity. For full accent-insensitivity,
+      // a custom SQLite function like unaccent or a more complex regex/replace might be needed in D1.
+      // Assuming basic lower() is sufficient for common use cases or unaccent is available.
+      searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery.toLowerCase()}%`));
+
+      if (searchConditions.length > 0) {
+        filters.push(or(...searchConditions));
+      }
+    }
 
     const items = await getDb(env.DB)
       .select()
