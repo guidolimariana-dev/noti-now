@@ -14,19 +14,32 @@ import {
   NumberField,
   CreateButton,
   FilterForm,
+  SelectInput,
 } from '@/components/admin'
 
 export const RecorridoList = () => (
   <List
+    filters={[<TextInput source="q" label="Buscar" alwaysOn />]}
     actions={
       <div className="flex items-center gap-2">
-        <FilterForm filters={[<TextInput source="q" alwaysOn />]} />
         <CreateButton />
       </div>
     }
   >
-    <DataTable bulkActionButtons={false} rowClick="show">
-      <DataTable.Col source="codigo" />
+    <DataTable
+      bulkActionButtons={false}
+      rowClick="show"
+    >
+      <DataTable.Col
+        source="codigo"
+        conditionalClassName={(record) =>
+          !record || !record.estado
+            ? 'border-l-4 border-gray-300'
+            : record.estado === 'Activo'
+            ? 'border-l-4 border-green-500'
+            : 'border-l-4 border-red-500'
+        }
+      />
       <DataTable.Col source="nombre" />
       <DataTable.Col source="estado" />
     </DataTable>
@@ -38,7 +51,15 @@ export const RecorridoCreate = () => (
     <SimpleForm>
       <NumberInput source="codigo" required />
       <TextInput source="nombre" required />
-      <TextInput source="estado" required />
+      <SelectInput
+        source="estado"
+        choices={[
+          { id: 'Activo', name: 'Activo' },
+          { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
+        ]}
+        emptyText="Seleccionar estado..."
+        required
+      />
     </SimpleForm>
   </Create>
 )
@@ -48,7 +69,15 @@ export const RecorridoEdit = () => (
     <SimpleForm>
       <NumberInput source="codigo" required disabled />
       <TextInput source="nombre" required />
-      <TextInput source="estado" required />
+      <SelectInput
+        source="estado"
+        choices={[
+          { id: 'Activo', name: 'Activo' },
+          { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
+        ]}
+        emptyText="Seleccionar estado..."
+        required
+      />
     </SimpleForm>
   </Edit>
 )
