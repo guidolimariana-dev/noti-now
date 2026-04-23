@@ -1,8 +1,6 @@
 import { 
   List, 
-  DataTable, 
-  TextField, 
-  NumberField,
+  DataTable,
   EditButton,
   ShowButton,
   Create,
@@ -11,18 +9,26 @@ import {
   SimpleForm,
   TextInput,
   NumberInput,
-  SimpleShowLayout
+  SimpleShowLayout,
+  TextField,
+  NumberField,
+  CreateButton,
+  FilterForm,
 } from '@/components/admin'
 
 export const RecorridoList = () => (
-  <List>
-    <DataTable bulkActionButtons={false}>
-      <NumberField source="id" />
-      <NumberField source="codigo" />
-      <TextField source="nombre" />
-      <TextField source="estado" />
-      <EditButton />
-      <ShowButton />
+  <List
+    actions={
+      <div className="flex items-center gap-2">
+        <FilterForm filters={[<TextInput source="q" alwaysOn />]} />
+        <CreateButton />
+      </div>
+    }
+  >
+    <DataTable bulkActionButtons={false} rowClick="show">
+      <DataTable.Col source="codigo" />
+      <DataTable.Col source="nombre" />
+      <DataTable.Col source="estado" />
     </DataTable>
   </List>
 )
@@ -48,7 +54,7 @@ export const RecorridoEdit = () => (
 )
 
 export const RecorridoShow = () => (
-  <Show>
+  <Show actions={<div className="flex justify-end items-center gap-2"><EditButton /></div>}>
     <SimpleShowLayout>
       <NumberField source="id" />
       <NumberField source="codigo" />

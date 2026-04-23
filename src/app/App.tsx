@@ -9,8 +9,7 @@ export function App() {
   return (
     //@ts-ignore
     <Admin routerProvider={tanStackRouterProvider} dataProvider={dataProvider} authProvider={authProvider} loginPage={LoginPage}>
-      <Resource name="recorrido" list={RecorridoList} create={RecorridoCreate} edit={RecorridoEdit} show={RecorridoShow} 
-      />
+      <Resource name="recorrido" list={RecorridoList} create={RecorridoCreate} edit={RecorridoEdit} show={RecorridoShow}/>
     </Admin>
   );
 }
