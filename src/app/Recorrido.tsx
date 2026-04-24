@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import {
+import { 
   List, 
   DataTable,
   EditButton,
@@ -20,14 +20,12 @@ import {
 } from '@/components/admin'
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
-import { useShowContext } from 'ra-core' // Import useShowContext directly from ra-core
+import { useShowContext, useListContext } from 'ra-core' // Import hooks
 
 export const RecorridoList = () => {
   const [open, setOpen] = useState(false);
@@ -36,8 +34,15 @@ export const RecorridoList = () => {
   return (
     <>
       <List
+        sort={{ field: 'codigo', order: 'ASC' }}
         filters={[
-          <TextInput source="q" label="Buscar" alwaysOn />,
+          <TextInput 
+            source="q" 
+            label="Buscar" 
+            placeholder="Busqueda por nombre o código..." 
+            alwaysOn 
+            className="w-72"
+          />,
           <SelectInput
             source="estado"
             label="Estado"
@@ -45,7 +50,9 @@ export const RecorridoList = () => {
               { id: 'Activo', name: 'Activo' },
               { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
             ]}
+            emptyText="Busqueda por estado..."
             alwaysOn
+            className="w-48"
           />,
         ]}
         actions={
@@ -64,6 +71,7 @@ export const RecorridoList = () => {
         >
           <DataTable.Col
             source="codigo"
+            label="Código"
             conditionalClassName={(record) =>
               !record || !record.estado
                 ? 'border-l-4 border-gray-300'
@@ -72,9 +80,12 @@ export const RecorridoList = () => {
                 : 'border-l-4 border-red-500'
             }
           />
-          <DataTable.Col source="nombre" />
-          <DataTable.Col source="estado" />
+          <DataTable.Col source="nombre" label="Nombre" />
+          <DataTable.Col source="estado" label="Estado" disableSort={true} />
         </DataTable>
+        <p className="text-xs text-muted-foreground mt-4 italic">
+          *Para ordenar los recorridos de la tabla por nombre, hacer click sobre el nombre de la columna para ordenar alfabeticamente y tocar el simbolo con la flecha para ordenar a la inversa. Igualmente con la columna de los códigos.
+        </p>
       </List>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -103,7 +114,7 @@ export const RecorridoList = () => {
 };
 
 export const RecorridoCreate = () => (
-  <Create>
+  <Create redirect="list">
     <SimpleForm>
       <NumberInput source="codigo" required />
       <TextInput source="nombre" required />
