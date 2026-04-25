@@ -40,6 +40,7 @@
         "ra-core": "^5.14.5",
         "ra-i18n-polyglot": "^5.14.5",
         "ra-language-english": "^5.14.5",
+        "ra-language-spanish": "^1.0.0",
         "ra-router-tanstack": "^5.14.5",
         "radix-ui": "^1.4.3",
         "react": "^19.2.0",
@@ -1344,6 +1345,8 @@
     "ra-i18n-polyglot": ["ra-i18n-polyglot@5.14.5", "", { "dependencies": { "node-polyglot": "^2.2.2", "ra-core": "^5.14.5" } }, "sha512-qP/qxAgyoJgxGJBqWZdliHc5vCK8WZM7YL3Jkre8URnmru9hPZD3vilQH4LSW/W+5yLfYoLk81597Gig9g9euw=="],
 
     "ra-language-english": ["ra-language-english@5.14.5", "", { "dependencies": { "ra-core": "^5.14.5" } }, "sha512-5lB3O1/gNSgvKRDR1NA9yOEMSwGdrJYzv4etpLBaVVnAX268BHubZbm1pLmT7j4xEc9kvUQC58/rAnFDORqbiQ=="],
+
+    "ra-language-spanish": ["ra-language-spanish@1.0.0", "", {}, "sha512-hdsW0DtE9foDVMkct3kyLdm8sKgwFFKeqBJ9bxOz3T7qtPAXljxOIgSmvSEjx3bKS0xfUkHX8kt3wvB+Q7fyIg=="],
 
     "ra-router-tanstack": ["ra-router-tanstack@5.14.5", "", { "peerDependencies": { "@tanstack/history": "^1.0.0", "@tanstack/react-router": "^1.0.0", "ra-core": "^5.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-boHTNtH7KbVcm5bw++pY8glEz8HYONVJCyh+gvSyLaLht2reuZYU71pw1wDwaMv6NKoP9kqSqQTcJ+IAxJ8wWQ=="],
 

@@ -27,21 +27,15 @@ export const getListFn = createServerFn({ method: 'GET' })
     }).filter(Boolean)
 
     if (params.filter.q) {
-      const searchQuery = String(params.filter.q);
-      const numericSearch = Number(searchQuery);
+      const searchQuery = String(params.filter.q).toLowerCase();
 
       const searchConditions = [];
 
-      // Search by codigo if q is a valid number
-      if (!isNaN(numericSearch)) {
-        searchConditions.push(eq(table.codigo, numericSearch));
-      }
+      // Search by nombre (case-insensitive)
+      searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery}%`));
 
-      // Search by nombre (case-insensitive and accent-insensitive)
-      // Note: SQLite's lower() handles basic case-insensitivity. For full accent-insensitivity,
-      // a custom SQLite function like unaccent or a more complex regex/replace might be needed in D1.
-      // Assuming basic lower() is sufficient for common use cases or unaccent is available.
-      searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery.toLowerCase()}%`));
+      // Search by codigo (converting to text and partial match)
+      searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
 
       if (searchConditions.length > 0) {
         filters.push(or(...searchConditions));

@@ -34,6 +34,7 @@ export const RecorridoList = () => {
   return (
     <>
       <List
+        title="Recorridos"
         sort={{ field: 'codigo', order: 'ASC' }}
         filters={[
           <TextInput 
@@ -125,7 +126,6 @@ export const RecorridoCreate = () => (
           { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
         ]}
         emptyText="Seleccionar estado..."
-        required
       />
     </SimpleForm>
   </Create>
@@ -143,7 +143,6 @@ export const RecorridoEdit = () => (
           { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
         ]}
         emptyText="Seleccionar estado..."
-        required
       />
     </SimpleForm>
   </Edit>
