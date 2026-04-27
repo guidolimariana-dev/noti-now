@@ -126,6 +126,7 @@ export const RecorridoCreate = () => (
           { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
         ]}
         emptyText="Seleccionar estado..."
+        required
       />
     </SimpleForm>
   </Create>
@@ -143,6 +144,7 @@ export const RecorridoEdit = () => (
           { id: 'Fuera de Servicio', name: 'Fuera de Servicio' },
         ]}
         emptyText="Seleccionar estado..."
+        required
       />
     </SimpleForm>
   </Edit>

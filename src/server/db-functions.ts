@@ -132,15 +132,25 @@ export const createFn = createServerFn({ method: 'POST' })
     const { resource, params } = data
     const table = getTable(resource)
 
-    const items: {id: number}[] = await getDb(env.DB)
-      .insert(table)
-      .values(params.data)
-      .returning({ id: table.id })
-      
-    return {
-      data: items[0]
+    // Proactive validation
+    const missingField = findMissingRequiredField(table, params.data, false);
+    if (missingField) {
+      throw new Error(`VALIDATION_ERROR:required:${missingField}`);
     }
-  })
+
+    try {
+      const items: {id: number}[] = await getDb(env.DB)
+        .insert(table)
+        .values(params.data)
+        .returning({ id: table.id })
+
+      return {
+        data: items[0]
+      }
+    } catch (error: any) {
+      throw error;
+    }
+    })
 
 export const updateFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { resource: string, params: any}) => data)
@@ -148,17 +158,62 @@ export const updateFn = createServerFn({ method: 'POST' })
     const { resource, params } = data
     const table = getTable(resource)
 
-    const updatedItems = await getDb(env.DB)
-      .update(table)
-      .set(params.data)
-      .where(eq(table.id, params.id))
-      .returning({ id: table.id })
-      
-    return {
-      data: updatedItems[0]
+    // Proactive validation
+    const missingField = findMissingRequiredField(table, params.data, true);
+    if (missingField) {
+      throw new Error(`VALIDATION_ERROR:required:${missingField}`);
+    }
+
+    try {
+      const updatedItems = await getDb(env.DB)
+        .update(table)
+        .set(params.data)
+        .where(eq(table.id, params.id))
+        .returning({ id: table.id })
+        
+      return {
+        data: updatedItems[0]
+      }
+    } catch (error: any) {
+      console.error("Error en updateFn:", error);
+      throw error;
     }
   })
 
+function findMissingRequiredField(table: any, data: any, isUpdate: boolean): string | undefined {
+  // Drizzle tables store columns in different places depending on the version, 
+  // but they are always available on the table object itself for standard definitions.
+  for (const key in table) {
+    const column = table[key];
+    
+    // Check if it looks like a Drizzle column
+    if (column && typeof column === 'object' && (column.columnType || column.name)) {
+      
+      // Skip ID field as it's typically auto-incremented by the DB
+      if (key === 'id') continue;
+
+      // Check if the column is NOT NULL. 
+      // In Drizzle, this is usually stored in column.notNull
+      if (column.notNull) {
+        const value = data[key];
+        const isPresent = key in data;
+
+        if (isUpdate) {
+          // In update, only validate if the field is explicitly provided as null or empty
+          if (isPresent && (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))) {
+            return key;
+          }
+        } else {
+          // In create, the field MUST be present and NOT null/empty
+          if (!isPresent || value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+            return key;
+          }
+        }
+      }
+    }
+  }
+  return undefined;
+}
 export const updateManyFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { resource: string, params: any}) => data)
   .handler(async ({ data }) => {

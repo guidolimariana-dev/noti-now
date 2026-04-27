@@ -26,6 +26,7 @@ import {
   useStore,
   useTranslate,
   useTranslateLabel,
+  Translate,
 } from "ra-core";
 import { useNavigate } from "react-router";
 import { ArrowDownAZ, ArrowUpZA } from "lucide-react";
@@ -288,7 +289,9 @@ const isPromise = (value: any): value is Promise<any> =>
 const DataTableEmpty = () => {
   return (
     <Alert>
-      <AlertDescription>No results found.</AlertDescription>
+      <AlertDescription>
+        <Translate i18nKey="ra.list.no_results">No se encuentran resultados</Translate>
+      </AlertDescription>
     </Alert>
   );
 };

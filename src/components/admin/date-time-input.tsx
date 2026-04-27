@@ -257,8 +257,9 @@ const formatDateTime = (value: string | Date) => {
 // converts a date string entered usinf a datetime-local input
 // into an ISO date using the browser timezone
 const convertDateStringToISO = (date: string) => {
+  if (!date) return "";
   const localDate = new Date(date);
-  return localDate.toISOString();
+  return isNaN(localDate.getTime()) ? "" : localDate.toISOString();
 };
 
 /**

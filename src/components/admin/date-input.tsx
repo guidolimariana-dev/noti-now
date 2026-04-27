@@ -254,7 +254,7 @@ export type DateInputProps = InputProps & {
  * @returns {String} A standardized date (yyyy-MM-dd), to be passed to an <input type="date" />
  */
 const convertDateToString = (value: Date) => {
-  if (!(value instanceof Date) || isNaN(value.getDate())) return "";
+  if (!(value instanceof Date) || typeof value.getTime !== 'function' || isNaN(value.getDate())) return "";
   const localDate = new Date(value.getTime());
   const pad = "00";
   const yyyy = localDate.getFullYear().toString();

@@ -119,3 +119,12 @@ export const recorrido = sqliteTable("recorrido", {
   nombre: text().notNull(),
   estado: text().notNull(),
 });
+
+export const recordatorio = sqliteTable("recordatorio", {
+  id: integer().primaryKey({ autoIncrement: true }),
+  fecha_envio: integer({ mode: "timestamp" }).notNull(),
+  fecha_limite: integer({ mode: "timestamp" }).notNull(),
+  id_recorrido: integer().notNull().references(() => recorrido.id),
+  estado: text().notNull(),
+});
+

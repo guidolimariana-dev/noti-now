@@ -29,6 +29,13 @@
       "when": 1776896462209,
       "tag": "0003_add_recorrido",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1777228386888,
+      "tag": "0004_add_recordatorio",
+      "breakpoints": true
     }
   ]
 }
