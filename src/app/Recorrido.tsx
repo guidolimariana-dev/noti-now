@@ -25,7 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { useShowContext, useListContext } from 'ra-core' // Import hooks
+import { useShowContext, useRecordContext, useListContext } from 'ra-core' // Import hooks
 
 export const RecorridoList = () => {
   const [open, setOpen] = useState(false);
@@ -95,8 +95,8 @@ export const RecorridoList = () => {
             <Show id={selectedRecordId} resource="recorrido" title={<RecorridoTitle />} actions={<div />}>
               <div className="flex-1 overflow-y-auto">
                 <SimpleShowLayout>
-                  <RecordField source="codigo" label="Código">
-                    <NumberField source="codigo" className="text-xl" />
+                  <RecordField source="nombre" label="Nombre">
+                    <TextField source="nombre" className="text-xl" />
                   </RecordField>
                   <RecordField source="estado" label="Estado">
                     <TextField source="estado" className="text-xl" />
@@ -153,8 +153,8 @@ export const RecorridoEdit = () => (
 export const RecorridoShow = () => (
   <Show title={<RecorridoTitle />} actions={<div className="flex justify-end items-center gap-2"><EditButton /></div>}>
     <SimpleShowLayout>
-      <RecordField source="codigo" label="Código">
-        <NumberField source="codigo" className="text-xl" />
+      <RecordField source="nombre" label="Nombre">
+        <TextField source="nombre" className="text-xl" />
       </RecordField>
       <RecordField source="estado" label="Estado">
         <TextField source="estado" className="text-xl" />
@@ -164,6 +164,6 @@ export const RecorridoShow = () => (
 )
 
 const RecorridoTitle = () => {
-  const { record } = useShowContext();
+  const record = useRecordContext();
   return <span>{record ? record.nombre : 'Recorrido'}</span>;
 };

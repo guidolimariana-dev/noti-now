@@ -26,7 +26,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { useShowContext } from 'ra-core'
+import { useShowContext, useRecordContext } from 'ra-core'
 
 // Validación personalizada
 const validateRecordatorio = (values: any) => {
@@ -156,9 +156,6 @@ export const RecordatorioList = () => {
             <Show id={selectedRecordId} resource="recordatorio" title={<RecordatorioTitle />} actions={<div />}>
               <div className="flex-1 overflow-y-auto">
                 <SimpleShowLayout>
-                  <RecordField source="id" label="ID">
-                    <TextField source="id" className="text-xl" />
-                  </RecordField>
                   <RecordField source="fecha_envio" label="Fecha Envío">
                     <DateField source="fecha_envio" showTime className="text-xl" />
                   </RecordField>
@@ -187,7 +184,7 @@ export const RecordatorioList = () => {
 };
 
 const RecordatorioRecorridoField = () => {
-  const { record } = useShowContext();
+  const record = useRecordContext();
   if (!record) return null;
   return <span className="text-xl">[{record.codigo}] - {record.nombre}</span>;
 }
@@ -257,9 +254,6 @@ export const RecordatorioEdit = () => (
 export const RecordatorioShow = () => (
   <Show title={<RecordatorioTitle />} actions={<div className="flex justify-end items-center gap-2"><EditButton /></div>}>
     <SimpleShowLayout>
-      <RecordField source="id" label="ID">
-        <TextField source="id" className="text-xl" />
-      </RecordField>
       <RecordField source="fecha_envio" label="Fecha Envío">
         <DateField source="fecha_envio" showTime className="text-xl" />
       </RecordField>
@@ -279,6 +273,6 @@ export const RecordatorioShow = () => (
 )
 
 const RecordatorioTitle = () => {
-  const { record } = useShowContext();
+  const record = useRecordContext();
   return <span>{record ? `Recordatorio #${record.id}` : 'Recordatorio'}</span>;
 };
