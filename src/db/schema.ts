@@ -115,9 +115,22 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 export const recorrido = sqliteTable("recorrido", {
   id: integer().primaryKey({ autoIncrement: true }),
-  codigo: integer().notNull(),
+  codigo: integer().notNull().unique(),
   nombre: text().notNull(),
   estado: text().notNull(),
+});
+
+export const clientes = sqliteTable("clientes", {
+  id: integer().primaryKey({ autoIncrement: true }),
+  codigo: integer().notNull(),
+  razon_social: text().notNull(),
+  nombre_fantasia: text().notNull(),
+  cuit: text().notNull(),
+  telefono: text().notNull(),
+  email: text().notNull(),
+  numero_circuito: integer().notNull().references(() => recorrido.codigo),
+  llamar_sn: text().notNull(),
+  forma_contacto: text().notNull(),
 });
 
 export const recordatorio = sqliteTable("recordatorio", {

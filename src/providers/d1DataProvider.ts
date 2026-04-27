@@ -7,6 +7,14 @@ const fieldLabels: Record<string, string> = {
   fecha_envio: 'Fecha Envío',
   fecha_limite: 'Fecha Límite',
   id_recorrido: 'Recorrido',
+  razon_social: 'Razón Social',
+  nombre_fantasia: 'Nombre Fantasía',
+  cuit: 'CUIT',
+  telefono: 'Teléfono',
+  email: 'Email',
+  numero_circuito: 'Número Circuito',
+  llamar_sn: 'Llamar S/N',
+  forma_contacto: 'Forma Contacto',
 };
 
 const formatErrorMessage = (error: any) => {

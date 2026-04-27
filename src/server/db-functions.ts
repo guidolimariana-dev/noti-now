@@ -48,6 +48,21 @@ export const getListFn = createServerFn({ method: 'GET' })
         searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery}%`));
       }
 
+      // Search by razon_social (case-insensitive) if column exists
+      if (table.razon_social) {
+        searchConditions.push(like(sql`lower(${table.razon_social})`, `%${searchQuery}%`));
+      }
+
+      // Search by nombre_fantasia (case-insensitive) if column exists
+      if (table.nombre_fantasia) {
+        searchConditions.push(like(sql`lower(${table.nombre_fantasia})`, `%${searchQuery}%`));
+      }
+
+      // Search by cuit (partial match) if column exists
+      if (table.cuit) {
+        searchConditions.push(like(table.cuit, `%${searchQuery}%`));
+      }
+
       // Search by codigo (converting to text and partial match) if column exists
       if (table.codigo) {
         searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
@@ -95,10 +110,14 @@ export const getOneFn = createServerFn({ method: 'GET' })
     const { resource, params } = data
     const table = getTable(resource)
 
+    const condition = resource === 'recorrido' 
+      ? or(eq(table.id, params.id), eq(table.codigo, params.id))
+      : eq(table.id, params.id);
+
     const [item] = await getDb(env.DB)
       .select()
       .from(table)
-      .where(eq(table.id, params.id))
+      .where(condition)
 
     if (!item) throw new Error('Not found')
 
@@ -113,10 +132,14 @@ export const getManyFn = createServerFn({ method: 'GET' })
     const { resource, params } = data
     const table = getTable(resource)
 
+    const condition = resource === 'recorrido'
+      ? or(inArray(table.id, params.ids as any[]), inArray(table.codigo, params.ids as any[]))
+      : inArray(table.id, params.ids as any[]);
+
     const items = await getDb(env.DB)
       .select()
       .from(table)
-      .where(inArray(table.id, params.ids as any[]));
+      .where(condition);
       
     return {
       data: items,
