@@ -23,7 +23,19 @@ export const getListFn = createServerFn({ method: 'GET' })
       if (key === 'q') {
         return undefined; // Handled separately
       }
-      return eq(table[key], value)
+      
+      // Try to convert to number if the column is a number
+      const column = table[key];
+      let finalValue = value;
+      
+      if (column && typeof column === 'object' && (column.columnType === 'integer' || column.columnType === 'number')) {
+        const numValue = Number(value);
+        if (!isNaN(numValue)) {
+          finalValue = numValue;
+        }
+      }
+
+      return eq(table[key], finalValue)
     }).filter(Boolean)
 
     if (params.filter.q) {
@@ -31,11 +43,28 @@ export const getListFn = createServerFn({ method: 'GET' })
 
       const searchConditions = [];
 
-      // Search by nombre (case-insensitive)
-      searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery}%`));
+      // Search by nombre (case-insensitive) if column exists
+      if (table.nombre) {
+        searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery}%`));
+      }
 
-      // Search by codigo (converting to text and partial match)
-      searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
+      // Search by codigo (converting to text and partial match) if column exists
+      if (table.codigo) {
+        searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
+      }
+
+      // Search by fecha_envio if column exists
+      if (table.fecha_envio) {
+        // Support DD/MM/YYYY format in search
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(searchQuery)) {
+          const [day, month, year] = searchQuery.split('/');
+          const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${formattedDate}%`));
+        } else {
+          // General search in the formatted date string (YYYY-MM-DD)
+          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${searchQuery}%`));
+        }
+      }
 
       if (searchConditions.length > 0) {
         filters.push(or(...searchConditions));
@@ -83,12 +112,40 @@ export const getManyFn = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
+
+    const items = await getDb(env.DB)
+      .select()
+      .from(table)
+      .where(inArray(table.id, params.ids as any[]));
+      
+    return {
+      data: items,
+    }
+  })
+
+export const getManyReferenceFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
     const { page, perPage } = params.pagination
     const { field, order } = params.sort
 
     const filters = [
       eq(table[params.target], params.id),
-      ...Object.entries(params.filter).map(([key, value]) => eq(table[key], value))
+      ...Object.entries(params.filter).map(([key, value]) => {
+        // Try to convert to number if the column is a number
+        const column = table[key];
+        let finalValue = value;
+        
+        if (column && typeof column === 'object' && (column.columnType === 'integer' || column.columnType === 'number')) {
+          const numValue = Number(value);
+          if (!isNaN(numValue)) {
+            finalValue = numValue;
+          }
+        }
+        return eq(table[key], finalValue);
+      })
     ]
 
     const items = await getDb(env.DB)
@@ -110,22 +167,6 @@ export const getManyFn = createServerFn({ method: 'GET' })
     }
   })
 
-export const getManyReferenceFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-
-    const items = await getDb(env.DB)
-      .select()
-      .from(table)
-      .where(inArray(table.id, params.ids as any[]));
-      
-    return {
-      data: items,
-    }
-  })
-
 export const createFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { resource: string, params: any}) => data)
   .handler(async ({ data }) => {
@@ -138,10 +179,12 @@ export const createFn = createServerFn({ method: 'POST' })
       throw new Error(`VALIDATION_ERROR:required:${missingField}`);
     }
 
+    const transformedData = transformData(table, params.data);
+
     try {
       const items: {id: number}[] = await getDb(env.DB)
         .insert(table)
-        .values(params.data)
+        .values(transformedData)
         .returning({ id: table.id })
 
       return {
@@ -164,10 +207,12 @@ export const updateFn = createServerFn({ method: 'POST' })
       throw new Error(`VALIDATION_ERROR:required:${missingField}`);
     }
 
+    const transformedData = transformData(table, params.data);
+
     try {
       const updatedItems = await getDb(env.DB)
         .update(table)
-        .set(params.data)
+        .set(transformedData)
         .where(eq(table.id, params.id))
         .returning({ id: table.id })
         
@@ -179,6 +224,43 @@ export const updateFn = createServerFn({ method: 'POST' })
       throw error;
     }
   })
+
+function transformData(table: any, data: any): any {
+  const transformed = { ...data };
+  
+  for (const key in table) {
+    const column = table[key];
+    if (column && typeof column === 'object' && (column.columnType || column.name)) {
+      const value = transformed[key];
+      
+      if (value !== undefined && value !== null) {
+        // Check if it's a timestamp column
+        // In Drizzle SQLite, mode is often in column.config.mode or column.mode
+        const mode = column.config?.mode || column.mode;
+        
+        if (mode === 'timestamp' || mode === 'timestamp_ms') {
+          if (typeof value === 'string' && value !== '') {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              transformed[key] = date;
+            }
+          } else if (typeof value === 'number') {
+            transformed[key] = new Date(value);
+          }
+        } 
+        // Convert foreign keys to numbers if they are strings
+        else if (key.startsWith('id_') && typeof value === 'string' && value !== '') {
+          const numValue = Number(value);
+          if (!isNaN(numValue)) {
+            transformed[key] = numValue;
+          }
+        }
+      }
+    }
+  }
+  
+  return transformed;
+}
 
 function findMissingRequiredField(table: any, data: any, isUpdate: boolean): string | undefined {
   // Drizzle tables store columns in different places depending on the version, 
@@ -220,9 +302,11 @@ export const updateManyFn = createServerFn({ method: 'POST' })
     const { resource, params } = data
     const table = getTable(resource)
 
+    const transformedData = transformData(table, params.data);
+
     await getDb(env.DB)
       .update(table)
-      .set(params.data)
+      .set(transformedData)
       .where(inArray(table.id, params.ids as any[]))
       
     return {

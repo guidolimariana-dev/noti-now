@@ -9,6 +9,7 @@ import {
   Show,
   SimpleForm,
   SelectInput,
+  TextInput,
   DateTimeInput,
   SimpleShowLayout,
   TextField,
@@ -71,6 +72,39 @@ export const RecordatorioList = () => {
       <List
         title="Recordatorios"
         sort={{ field: 'id', order: 'DESC' }}
+        filters={[
+          <TextInput 
+            source="q" 
+            label="Buscar" 
+            placeholder="Buscar por fecha de envío..." 
+            alwaysOn 
+            className="w-72"
+          />,
+          <SelectInput
+            source="estado"
+            label="Estado"
+            choices={[
+              { id: 'Programado', name: 'Programado' },
+              { id: 'Enviado', name: 'Enviado' },
+              { id: 'Cancelado', name: 'Cancelado' },
+            ]}
+            emptyText="Filtrar por estado..."
+            alwaysOn
+            className="w-48"
+          />,
+          <ReferenceInput 
+            source="id_recorrido" 
+            reference="recorrido"
+            alwaysOn
+          >
+            <SelectInput 
+              label="Recorrido" 
+              optionText="nombre" 
+              emptyText="Filtrar por recorrido..."
+              className="w-64"
+            />
+          </ReferenceInput>
+        ]}
         actions={
           <div className="flex items-center gap-2">
             <CreateButton />
@@ -95,7 +129,7 @@ export const RecordatorioList = () => {
                 ? 'border-l-4 border-red-500'
                 : record.estado === 'Enviado'
                 ? 'border-l-4 border-green-500'
-                : 'border-l-4 border-orange-500' // Programado
+                : 'border-l-4 border-yellow-500' // Programado
             }
           />
           <DataTable.Col source="fecha_envio" label="Fecha Envío">
@@ -111,6 +145,9 @@ export const RecordatorioList = () => {
             </ReferenceField>
           </DataTable.Col>
         </DataTable>
+        <p className="text-xs text-muted-foreground mt-4 italic">
+            *Para ordenar los recorridos de la tabla por su feche de envío, hacer click sobre el nombre de la columna para ordenar alfabeticamente y tocar el simbolo con la flecha para ordenar a la inversa. Igualmente con la columna de los identificadores.
+        </p>
       </List>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -169,6 +206,7 @@ export const RecordatorioCreate = () => (
         <SelectInput 
             label="Recorrido"
             optionText={(record: any) => record && record.codigo !== undefined ? `[${record.codigo}] - ${record.nombre}` : ''} 
+            optionValue="id"
             required 
         />
       </ReferenceInput>
@@ -199,6 +237,7 @@ export const RecordatorioEdit = () => (
         <SelectInput 
             label="Recorrido"
             optionText={(record: any) => record && record.codigo !== undefined ? `[${record.codigo}] - ${record.nombre}` : ''} 
+            optionValue="id"
             required 
         />
       </ReferenceInput>
