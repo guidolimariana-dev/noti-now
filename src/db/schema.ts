@@ -122,7 +122,7 @@ export const recorrido = sqliteTable("recorrido", {
 
 export const clientes = sqliteTable("clientes", {
   id: integer().primaryKey({ autoIncrement: true }),
-  codigo: integer().notNull(),
+  codigo: integer().notNull().unique(),
   razon_social: text().notNull(),
   nombre_fantasia: text().notNull(),
   cuit: text().notNull(),

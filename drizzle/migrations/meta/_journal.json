@@ -43,6 +43,13 @@
       "when": 1777294127552,
       "tag": "0005_add_clientes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1777326896413,
+      "tag": "0006_make_cliente_codigo_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `clientes_codigo_unique` ON `clientes` (`codigo`);

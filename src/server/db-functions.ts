@@ -4,7 +4,7 @@ import { getDb } from '@/db'
 import * as schema from '@/db/schema'
 import { eq, sql, asc, desc, inArray, and, or, like } from 'drizzle-orm'
 import { read, utils } from 'xlsx'
-import { diacritic } from 'diacritic'
+import * as diacritic from 'diacritic'
 
 const getTable = (resource: string): any => {
   // @ts-ignore
@@ -15,13 +15,17 @@ const getTable = (resource: string): any => {
 
 const normalize = (str: string) => {
   if (!str) return '';
-  // @ts-ignore - diacritic might have weird types or be a default export
-  const clean = diacritic?.clean ? diacritic.clean(str) : str;
-  return clean
+  const clean = diacritic.clean(str);
+  const normalized = clean
     .toLowerCase()
-    .replace(/[_\s-]/g, '') // remove underscores, spaces, hyphens
+    .replace(/[^a-z0-9]/g, '') // remove everything that is not a letter or number
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, ''); // remove accents
+  
+  // Special mappings for common excel headers
+  if (normalized === 'cod' || normalized === 'nro' || normalized === 'id') return 'codigo';
+  
+  return normalized;
 }
 
 function transformData(table: any, data: any): any {
@@ -93,28 +97,32 @@ function findMissingRequiredField(table: any, data: any, isUpdate: boolean): str
 function fillMissingFields(resource: string, table: any, data: any): any {
   const result = { ...data };
   
+  // Special business logic for Clientes before generic filling
+  if (resource === 'clientes') {
+    // 1. Handle Llamar S/N
+    if (!result['llamar_sn'] || (result['llamar_sn'] !== 'S' && result['llamar_sn'] !== 'N')) {
+      result['llamar_sn'] = 'S';
+    }
+
+    // 2. Handle Forma Contacto based on Llamar S/N
+    if (result['llamar_sn'] === 'N') {
+      result['forma_contacto'] = '-';
+    } else if (!result['forma_contacto'] || result['forma_contacto'].trim() === '') {
+      result['forma_contacto'] = 'No especificado';
+    }
+
+    // 3. Handle Nombre Fantasia
+    if (!result['nombre_fantasia'] || result['nombre_fantasia'].trim() === '') {
+      result['nombre_fantasia'] = result['razon_social'] || '';
+    }
+  }
+
   for (const key in table) {
     const column = table[key];
     if (key === 'id') continue;
     
     if (column && typeof column === 'object' && column.notNull) {
       if (result[key] === undefined || result[key] === null || (typeof result[key] === 'string' && result[key].trim() === '')) {
-        // Special cases for Clientes
-        if (resource === 'clientes') {
-          if (key === 'nombre_fantasia') {
-            result[key] = result['razon_social'] || '';
-            continue;
-          }
-          if (key === 'llamar_sn') {
-            result[key] = 'S';
-            continue;
-          }
-          if (key === 'forma_contacto') {
-             result[key] = 'No especificado';
-             continue;
-          }
-        }
-        
         // Generic defaults based on type
         if (column.columnType === 'integer' || column.columnType === 'number') {
           result[key] = 0;
@@ -333,7 +341,7 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
       const arrayBuffer = await object.arrayBuffer();
       const wb = read(arrayBuffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const jsonData = utils.sheet_to_json(ws);
+      const jsonData = utils.sheet_to_json(ws, { raw: true });
       if (jsonData.length === 0) throw new Error('El archivo está vacío');
       const columnMap: Record<string, string> = {};
       Object.keys(table).forEach(key => {
@@ -347,7 +355,21 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
         Object.keys(item).forEach(itemKey => {
           const normalizedItemKey = normalize(itemKey);
           const tableKey = columnMap[normalizedItemKey];
-          if (tableKey) cleanItem[tableKey] = item[itemKey];
+          if (tableKey) {
+            let value = item[itemKey];
+            
+            // Special handling for phone and numeric strings to prevent scientific notation
+            if (tableKey === 'telefono' || tableKey === 'cuit' || tableKey === 'codigo') {
+              if (typeof value === 'number') {
+                // Convert to string without scientific notation
+                value = value.toFixed(0);
+              } else if (value !== null && value !== undefined) {
+                value = String(value);
+              }
+            }
+            
+            cleanItem[tableKey] = value;
+          }
         });
         const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
         return transformData(table, dataWithDefaults);
@@ -355,7 +377,29 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
       if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes.');
       const chunkSize = 50;
       for (let i = 0; i < transformedData.length; i += chunkSize) {
-        await getDb(env.DB).insert(table).values(transformedData.slice(i, i + chunkSize));
+        const chunk = transformedData.slice(i, i + chunkSize);
+        
+        if (resource === 'clientes') {
+          // Special Upsert logic for Clientes using 'codigo' as unique key
+          await getDb(env.DB)
+            .insert(table)
+            .values(chunk)
+            .onConflictDoUpdate({
+              target: table.codigo,
+              set: {
+                razon_social: sql`excluded.razon_social`,
+                nombre_fantasia: sql`excluded.nombre_fantasia`,
+                cuit: sql`excluded.cuit`,
+                telefono: sql`excluded.telefono`,
+                email: sql`excluded.email`,
+                numero_circuito: sql`excluded.numero_circuito`,
+                llamar_sn: sql`excluded.llamar_sn`,
+                forma_contacto: sql`excluded.forma_contacto`,
+              }
+            });
+        } else {
+          await getDb(env.DB).insert(table).values(chunk);
+        }
       }
       return { data: { success: true, count: transformedData.length } }
     } catch (error: any) {
