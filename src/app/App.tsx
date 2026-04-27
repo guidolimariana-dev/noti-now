@@ -13,7 +13,7 @@ export function App() {
     <Admin routerProvider={tanStackRouterProvider} dataProvider={dataProvider} authProvider={authProvider} loginPage={LoginPage}>
       <Resource name="recorrido" list={RecorridoList} create={RecorridoCreate} edit={RecorridoEdit} show={RecorridoShow}/>
       <Resource name="recordatorio" list={RecordatorioList} create={RecordatorioCreate} edit={RecordatorioEdit} show={RecordatorioShow}/>
-      <Resource name="clientes" list={ClienteList} create={ClienteCreate} edit={ClienteEdit} show={ClienteShow}/>
+      <Resource name="clientes" list={ClienteList} edit={ClienteEdit} show={ClienteShow}/>
     </Admin>
   );
 }

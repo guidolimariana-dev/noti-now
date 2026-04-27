@@ -1,8 +1,10 @@
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn, getWebRequest } from '@tanstack/react-start'
 import { env } from 'cloudflare:workers'
 import { getDb } from '@/db'
 import * as schema from '@/db/schema'
 import { eq, sql, asc, desc, inArray, and, or, like } from 'drizzle-orm'
+import { read, utils } from 'xlsx'
+import { diacritic } from 'diacritic'
 
 const getTable = (resource: string): any => {
   // @ts-ignore
@@ -11,246 +13,25 @@ const getTable = (resource: string): any => {
   return table;
 };
 
-export const getListFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-    const { page, perPage } = params.pagination
-    const { field, order } = params.sort
-
-    const filters = Object.entries(params.filter).map(([key, value]) => {
-      if (key === 'q') {
-        return undefined; // Handled separately
-      }
-      
-      // Try to convert to number if the column is a number
-      const column = table[key];
-      let finalValue = value;
-      
-      if (column && typeof column === 'object' && (column.columnType === 'integer' || column.columnType === 'number')) {
-        const numValue = Number(value);
-        if (!isNaN(numValue)) {
-          finalValue = numValue;
-        }
-      }
-
-      return eq(table[key], finalValue)
-    }).filter(Boolean)
-
-    if (params.filter.q) {
-      const searchQuery = String(params.filter.q).toLowerCase();
-
-      const searchConditions = [];
-
-      // Search by nombre (case-insensitive) if column exists
-      if (table.nombre) {
-        searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery}%`));
-      }
-
-      // Search by razon_social (case-insensitive) if column exists
-      if (table.razon_social) {
-        searchConditions.push(like(sql`lower(${table.razon_social})`, `%${searchQuery}%`));
-      }
-
-      // Search by nombre_fantasia (case-insensitive) if column exists
-      if (table.nombre_fantasia) {
-        searchConditions.push(like(sql`lower(${table.nombre_fantasia})`, `%${searchQuery}%`));
-      }
-
-      // Search by cuit (partial match) if column exists
-      if (table.cuit) {
-        searchConditions.push(like(table.cuit, `%${searchQuery}%`));
-      }
-
-      // Search by codigo (converting to text and partial match) if column exists
-      if (table.codigo) {
-        searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
-      }
-
-      // Search by fecha_envio if column exists
-      if (table.fecha_envio) {
-        // Support DD/MM/YYYY format in search
-        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(searchQuery)) {
-          const [day, month, year] = searchQuery.split('/');
-          const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${formattedDate}%`));
-        } else {
-          // General search in the formatted date string (YYYY-MM-DD)
-          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${searchQuery}%`));
-        }
-      }
-
-      if (searchConditions.length > 0) {
-        filters.push(or(...searchConditions));
-      }
-    }
-
-    const items = await getDb(env.DB)
-      .select()
-      .from(table)
-      .where(filters.length ? and(...filters) : undefined)
-      .limit(perPage)
-      .offset((page - 1) * perPage)
-      .orderBy(order === 'ASC' ? asc(table[field]) : desc(table[field]))
-
-    const [countResult] = await getDb(env.DB)
-      .select({ count: sql<number>`count(*)` })
-      .from(table)
-
-    return {
-      data: items,
-      total: Number(countResult.count),
-    }
-  })
-
-export const getOneFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-
-    const condition = resource === 'recorrido' 
-      ? or(eq(table.id, params.id), eq(table.codigo, params.id))
-      : eq(table.id, params.id);
-
-    const [item] = await getDb(env.DB)
-      .select()
-      .from(table)
-      .where(condition)
-
-    if (!item) throw new Error('Not found')
-
-    return {
-      data: item,
-    }
-  })
-
-export const getManyFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-
-    const condition = resource === 'recorrido'
-      ? or(inArray(table.id, params.ids as any[]), inArray(table.codigo, params.ids as any[]))
-      : inArray(table.id, params.ids as any[]);
-
-    const items = await getDb(env.DB)
-      .select()
-      .from(table)
-      .where(condition);
-      
-    return {
-      data: items,
-    }
-  })
-
-export const getManyReferenceFn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-    const { page, perPage } = params.pagination
-    const { field, order } = params.sort
-
-    const filters = [
-      eq(table[params.target], params.id),
-      ...Object.entries(params.filter).map(([key, value]) => {
-        // Try to convert to number if the column is a number
-        const column = table[key];
-        let finalValue = value;
-        
-        if (column && typeof column === 'object' && (column.columnType === 'integer' || column.columnType === 'number')) {
-          const numValue = Number(value);
-          if (!isNaN(numValue)) {
-            finalValue = numValue;
-          }
-        }
-        return eq(table[key], finalValue);
-      })
-    ]
-
-    const items = await getDb(env.DB)
-      .select()
-      .from(table)
-      .where(and(...filters))
-      .limit(perPage)
-      .offset((page - 1) * perPage)
-      .orderBy(order === 'ASC' ? asc(table[field]) : desc(table[field]))
-
-    const [countResult] = await getDb(env.DB)
-      .select({ count: sql<number>`count(*)` })
-      .from(table)
-      .where(and(...filters));
-
-    return {
-      data: items,
-      total: Number(countResult.count),
-    }
-  })
-
-export const createFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-
-    // Proactive validation
-    const missingField = findMissingRequiredField(table, params.data, false);
-    if (missingField) {
-      throw new Error(`VALIDATION_ERROR:required:${missingField}`);
-    }
-
-    const transformedData = transformData(table, params.data);
-
-    try {
-      const items: {id: number}[] = await getDb(env.DB)
-        .insert(table)
-        .values(transformedData)
-        .returning({ id: table.id })
-
-      return {
-        data: items[0]
-      }
-    } catch (error: any) {
-      throw error;
-    }
-    })
-
-export const updateFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { resource: string, params: any}) => data)
-  .handler(async ({ data }) => {
-    const { resource, params } = data
-    const table = getTable(resource)
-
-    // Proactive validation
-    const missingField = findMissingRequiredField(table, params.data, true);
-    if (missingField) {
-      throw new Error(`VALIDATION_ERROR:required:${missingField}`);
-    }
-
-    const transformedData = transformData(table, params.data);
-
-    try {
-      const updatedItems = await getDb(env.DB)
-        .update(table)
-        .set(transformedData)
-        .where(eq(table.id, params.id))
-        .returning({ id: table.id })
-        
-      return {
-        data: updatedItems[0]
-      }
-    } catch (error: any) {
-      console.error("Error en updateFn:", error);
-      throw error;
-    }
-  })
+const normalize = (str: string) => {
+  if (!str) return '';
+  // @ts-ignore - diacritic might have weird types or be a default export
+  const clean = diacritic?.clean ? diacritic.clean(str) : str;
+  return clean
+    .toLowerCase()
+    .replace(/[_\s-]/g, '') // remove underscores, spaces, hyphens
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ''); // remove accents
+}
 
 function transformData(table: any, data: any): any {
   const transformed = { ...data };
   
+  // Remove id if it's null or undefined to let DB handle auto-increment
+  if (transformed.id === null || transformed.id === undefined) {
+    delete transformed.id;
+  }
+
   for (const key in table) {
     const column = table[key];
     if (column && typeof column === 'object' && (column.columnType || column.name)) {
@@ -258,7 +39,6 @@ function transformData(table: any, data: any): any {
       
       if (value !== undefined && value !== null) {
         // Check if it's a timestamp column
-        // In Drizzle SQLite, mode is often in column.config.mode or column.mode
         const mode = column.config?.mode || column.mode;
         
         if (mode === 'timestamp' || mode === 'timestamp_ms') {
@@ -271,7 +51,6 @@ function transformData(table: any, data: any): any {
             transformed[key] = new Date(value);
           }
         } 
-        // Convert foreign keys to numbers if they are strings
         else if (key.startsWith('id_') && typeof value === 'string' && value !== '') {
           const numValue = Number(value);
           if (!isNaN(numValue)) {
@@ -286,30 +65,18 @@ function transformData(table: any, data: any): any {
 }
 
 function findMissingRequiredField(table: any, data: any, isUpdate: boolean): string | undefined {
-  // Drizzle tables store columns in different places depending on the version, 
-  // but they are always available on the table object itself for standard definitions.
   for (const key in table) {
     const column = table[key];
-    
-    // Check if it looks like a Drizzle column
     if (column && typeof column === 'object' && (column.columnType || column.name)) {
-      
-      // Skip ID field as it's typically auto-incremented by the DB
       if (key === 'id') continue;
-
-      // Check if the column is NOT NULL. 
-      // In Drizzle, this is usually stored in column.notNull
       if (column.notNull) {
         const value = data[key];
         const isPresent = key in data;
-
         if (isUpdate) {
-          // In update, only validate if the field is explicitly provided as null or empty
           if (isPresent && (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))) {
             return key;
           }
         } else {
-          // In create, the field MUST be present and NOT null/empty
           if (!isPresent || value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
             return key;
           }
@@ -319,22 +86,301 @@ function findMissingRequiredField(table: any, data: any, isUpdate: boolean): str
   }
   return undefined;
 }
+
+/**
+ * Fills missing required fields with sensible defaults for import
+ */
+function fillMissingFields(resource: string, table: any, data: any): any {
+  const result = { ...data };
+  
+  for (const key in table) {
+    const column = table[key];
+    if (key === 'id') continue;
+    
+    if (column && typeof column === 'object' && column.notNull) {
+      if (result[key] === undefined || result[key] === null || (typeof result[key] === 'string' && result[key].trim() === '')) {
+        // Special cases for Clientes
+        if (resource === 'clientes') {
+          if (key === 'nombre_fantasia') {
+            result[key] = result['razon_social'] || '';
+            continue;
+          }
+          if (key === 'llamar_sn') {
+            result[key] = 'S';
+            continue;
+          }
+          if (key === 'forma_contacto') {
+             result[key] = 'No especificado';
+             continue;
+          }
+        }
+        
+        // Generic defaults based on type
+        if (column.columnType === 'integer' || column.columnType === 'number') {
+          result[key] = 0;
+        } else {
+          result[key] = '';
+        }
+      }
+    }
+  }
+  return result;
+}
+
+export const getListFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const { page, perPage } = params.pagination
+    const { field, order } = params.sort
+
+    const filters = Object.entries(params.filter).map(([key, value]) => {
+      if (key === 'q') return undefined;
+      const column = table[key];
+      let finalValue = value;
+      if (column && typeof column === 'object' && (column.columnType === 'integer' || column.columnType === 'number')) {
+        const numValue = Number(value);
+        if (!isNaN(numValue)) finalValue = numValue;
+      }
+      return eq(table[key], finalValue)
+    }).filter(Boolean)
+
+    if (params.filter.q) {
+      const searchQuery = String(params.filter.q).toLowerCase();
+      const searchConditions = [];
+      if (table.nombre) searchConditions.push(like(sql`lower(${table.nombre})`, `%${searchQuery}%`));
+      if (table.razon_social) searchConditions.push(like(sql`lower(${table.razon_social})`, `%${searchQuery}%`));
+      if (table.nombre_fantasia) searchConditions.push(like(sql`lower(${table.nombre_fantasia})`, `%${searchQuery}%`));
+      if (table.cuit) searchConditions.push(like(table.cuit, `%${searchQuery}%`));
+      if (table.codigo) searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
+      if (table.fecha_envio) {
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(searchQuery)) {
+          const [day, month, year] = searchQuery.split('/');
+          const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${formattedDate}%`));
+        } else {
+          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${searchQuery}%`));
+        }
+      }
+      if (searchConditions.length > 0) filters.push(or(...searchConditions));
+    }
+
+    const items = await getDb(env.DB)
+      .select()
+      .from(table)
+      .where(filters.length ? and(...filters) : undefined)
+      .limit(perPage)
+      .offset((page - 1) * perPage)
+      .orderBy(order === 'ASC' ? asc(table[field]) : desc(table[field]))
+
+    const [countResult] = await getDb(env.DB)
+      .select({ count: sql<number>`count(*)` })
+      .from(table)
+
+    return { data: items, total: Number(countResult.count) }
+  })
+
+export const getOneFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const condition = resource === 'recorrido' 
+      ? or(eq(table.id, params.id), eq(table.codigo, params.id))
+      : eq(table.id, params.id);
+    const [item] = await getDb(env.DB).select().from(table).where(condition)
+    if (!item) throw new Error('Not found')
+    return { data: item }
+  })
+
+export const getManyFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const condition = resource === 'recorrido'
+      ? or(inArray(table.id, params.ids as any[]), inArray(table.codigo, params.ids as any[]))
+      : inArray(table.id, params.ids as any[]);
+    const items = await getDb(env.DB).select().from(table).where(condition);
+    return { data: items }
+  })
+
+export const getManyReferenceFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const { page, perPage } = params.pagination
+    const { field, order } = params.sort
+    const filters = [
+      eq(table[params.target], params.id),
+      ...Object.entries(params.filter).map(([key, value]) => {
+        const column = table[key];
+        let finalValue = value;
+        if (column && typeof column === 'object' && (column.columnType === 'integer' || column.columnType === 'number')) {
+          const numValue = Number(value);
+          if (!isNaN(numValue)) finalValue = numValue;
+        }
+        return eq(table[key], finalValue);
+      })
+    ]
+    const items = await getDb(env.DB)
+      .select()
+      .from(table)
+      .where(and(...filters))
+      .limit(perPage)
+      .offset((page - 1) * perPage)
+      .orderBy(order === 'ASC' ? asc(table[field]) : desc(table[field]))
+    const [countResult] = await getDb(env.DB).select({ count: sql<number>`count(*)` }).from(table).where(and(...filters));
+    return { data: items, total: Number(countResult.count) }
+  })
+
+export const createFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const missingField = findMissingRequiredField(table, params.data, false);
+    if (missingField) throw new Error(`VALIDATION_ERROR:required:${missingField}`);
+    const transformedData = transformData(table, params.data);
+    const items: {id: number}[] = await getDb(env.DB).insert(table).values(transformedData).returning({ id: table.id })
+    return { data: items[0] }
+  })
+
+export const createManyFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { resource: string, params: { data: any[] }}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const columnMap: Record<string, string> = {};
+    Object.keys(table).forEach(key => {
+      const column = table[key];
+      if (key !== 'id' && typeof column === 'object' && (column.columnType || column.name)) {
+        columnMap[normalize(key)] = key;
+      }
+    });
+    const transformedData = params.data.map((item: any) => {
+      const cleanItem: any = {};
+      Object.keys(item).forEach(itemKey => {
+        const normalizedItemKey = normalize(itemKey);
+        const tableKey = columnMap[normalizedItemKey];
+        if (tableKey) cleanItem[tableKey] = item[itemKey];
+      });
+      const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
+      return transformData(table, dataWithDefaults);
+    }).filter(item => Object.keys(item).length > 0);
+    if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes en el archivo.');
+    const chunkSize = 50;
+    for (let i = 0; i < transformedData.length; i += chunkSize) {
+      const chunk = transformedData.slice(i, i + chunkSize);
+      await getDb(env.DB).insert(table).values(chunk);
+    }
+    return { data: { success: true, count: transformedData.length } }
+  })
+
+export const uploadToR2Fn = createServerFn({ method: 'POST' })
+  .inputValidator((data: FormData) => data)
+  .handler(async ({ data }) => {
+    const file = data.get('file') as File;
+    if (!file) throw new Error('No file provided');
+    const filename = `${Date.now()}-${file.name}`;
+    const arrayBuffer = await file.arrayBuffer();
+
+    let storage = env.STORAGE;
+    if (!storage) {
+      const request = getWebRequest();
+      // @ts-ignore
+      storage = request?.context?.cloudflare?.env?.STORAGE;
+    }
+
+    if (!storage) {
+      throw new Error('El almacenamiento R2 no está configurado en el servidor.');
+    }
+
+    try {
+      await storage.put(filename, arrayBuffer, {
+        httpMetadata: { contentType: file.type }
+      });
+      return { filename };
+    } catch (error: any) {
+      console.error('Error uploading to R2:', error);
+      throw new Error(`Error al subir el archivo a R2: ${error.message}`);
+    }
+  })
+
+export const processFileFromR2Fn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { filename: string, resource: string }) => data)
+  .handler(async ({ data }) => {
+    const { filename, resource } = data;
+    const table = getTable(resource);
+
+    let storage = env.STORAGE;
+    if (!storage) {
+      const request = getWebRequest();
+      // @ts-ignore
+      storage = request?.context?.cloudflare?.env?.STORAGE;
+    }
+
+    if (!storage) throw new Error('El almacenamiento R2 no está configurado.');
+
+    try {
+      const object = await storage.get(filename);
+      if (!object) throw new Error('Archivo no encontrado en R2');
+      const arrayBuffer = await object.arrayBuffer();
+      const wb = read(arrayBuffer, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const jsonData = utils.sheet_to_json(ws);
+      if (jsonData.length === 0) throw new Error('El archivo está vacío');
+      const columnMap: Record<string, string> = {};
+      Object.keys(table).forEach(key => {
+        const column = table[key];
+        if (key !== 'id' && typeof column === 'object' && (column.columnType || column.name)) {
+          columnMap[normalize(key)] = key;
+        }
+      });
+      const transformedData = jsonData.map((item: any) => {
+        const cleanItem: any = {};
+        Object.keys(item).forEach(itemKey => {
+          const normalizedItemKey = normalize(itemKey);
+          const tableKey = columnMap[normalizedItemKey];
+          if (tableKey) cleanItem[tableKey] = item[itemKey];
+        });
+        const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
+        return transformData(table, dataWithDefaults);
+      }).filter(item => Object.keys(item).length > 0);
+      if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes.');
+      const chunkSize = 50;
+      for (let i = 0; i < transformedData.length; i += chunkSize) {
+        await getDb(env.DB).insert(table).values(transformedData.slice(i, i + chunkSize));
+      }
+      return { data: { success: true, count: transformedData.length } }
+    } catch (error: any) {
+      console.error('Error processing file from R2:', error);
+      throw new Error(error.message || 'Error al procesar el archivo desde R2');
+    }
+  })
+
+export const updateFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { resource: string, params: any}) => data)
+  .handler(async ({ data }) => {
+    const { resource, params } = data
+    const table = getTable(resource)
+    const missingField = findMissingRequiredField(table, params.data, true);
+    if (missingField) throw new Error(`VALIDATION_ERROR:required:${missingField}`);
+    const transformedData = transformData(table, params.data);
+    const updatedItems = await getDb(env.DB).update(table).set(transformedData).where(eq(table.id, params.id)).returning({ id: table.id })
+    return { data: updatedItems[0] }
+  })
+
 export const updateManyFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { resource: string, params: any}) => data)
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-
     const transformedData = transformData(table, params.data);
-
-    await getDb(env.DB)
-      .update(table)
-      .set(transformedData)
-      .where(inArray(table.id, params.ids as any[]))
-      
-    return {
-      data: params.ids
-    }
+    await getDb(env.DB).update(table).set(transformedData).where(inArray(table.id, params.ids as any[]))
+    return { data: params.ids }
   })
 
 export const deleteFn = createServerFn({ method: 'POST' })
@@ -342,15 +388,8 @@ export const deleteFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-
-    const deletedItems = await getDb(env.DB)
-      .delete(table)
-      .where(eq(table.id, params.id))
-      .returning({ id: table.id })
-      
-    return {
-      data: deletedItems[0]
-    }
+    const deletedItems = await getDb(env.DB).delete(table).where(eq(table.id, params.id)).returning({ id: table.id })
+    return { data: deletedItems[0] }
   })
 
 export const deleteManyFn = createServerFn({ method: 'POST' })
@@ -358,12 +397,6 @@ export const deleteManyFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-
-    await getDb(env.DB)
-      .delete(table)
-      .where(inArray(table.id, params.ids as any[]))
-      
-    return {
-      data: params.ids
-    }
+    await getDb(env.DB).delete(table).where(inArray(table.id, params.ids as any[]))
+    return { data: params.ids }
   })

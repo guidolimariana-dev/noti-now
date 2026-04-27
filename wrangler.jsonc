@@ -24,7 +24,13 @@
 			// "database_id": "88e4dd7f-5048-454f-a912-56deefd6f079",
       "migrations_dir": "./drizzle/migrations"
 		}
-	]
+	],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "base-admin-storage"
+    }
+  ]
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

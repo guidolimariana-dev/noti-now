@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   List, 
   DataTable,
@@ -13,7 +13,6 @@ import {
   SimpleShowLayout,
   TextField,
   NumberField,
-  CreateButton,
   SelectInput,
   ReferenceInput,
   ReferenceField,
@@ -23,7 +22,76 @@ import {
   Sheet,
   SheetContent,
 } from '@/components/ui/sheet';
-import { useRecordContext } from 'ra-core'
+import { useRecordContext, useNotify, useRefresh } from 'ra-core'
+import { uploadToR2Fn, processFileFromR2Fn } from '@/server/db-functions';
+import { Button } from '@/components/ui/button';
+import { Upload } from 'lucide-react';
+
+const ImportButton = () => {
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // 1. Upload to R2
+      const { filename } = await uploadToR2Fn({ data: formData });
+
+      // 2. Process from R2
+      await processFileFromR2Fn({
+        data: {
+          filename,
+          resource: 'clientes'
+        }
+      });
+
+      notify('Carga de archivo completa!', { type: 'success' });
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      setTimeout(() => {
+        refresh();
+      }, 500);
+    } catch (error: any) {
+      console.error(error);
+      notify(error.message || 'Error al importar clientes', { type: 'error' });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <>
+      <input
+        type="file"
+        accept=".xlsx, .xls"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleImport}
+        disabled={importing}
+      />
+      <Button 
+        variant="outline" 
+        onClick={() => fileInputRef.current?.click()}
+        className="flex items-center gap-2"
+        disabled={importing}
+      >
+        <Upload className="w-4 h-4" />
+        {importing ? 'Importando...' : 'Importar'}
+      </Button>
+    </>
+  );
+};
 
 export const ClienteList = () => {
   const [open, setOpen] = useState(false);
@@ -38,14 +106,14 @@ export const ClienteList = () => {
           <TextInput 
             source="q" 
             label="Buscar" 
-            placeholder="Busqueda por razón social, fantasía o cuit..." 
+            placeholder="Busqueda por código, razón social o nombre fantasía..." 
             alwaysOn 
             className="w-72"
           />,
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <CreateButton />
+            <ImportButton />
           </div>
         }
       >
