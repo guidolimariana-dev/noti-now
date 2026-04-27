@@ -106,10 +106,24 @@ export const ClienteList = () => {
           <TextInput 
             source="q" 
             label="Buscar" 
-            placeholder="Busqueda por código, razón social o nombre fantasía..." 
+            placeholder="Busqueda por código, razón social o fantasía..." 
             alwaysOn 
-            className="w-72"
+            className="w-[450px]"
           />,
+          <ReferenceInput 
+            source="numero_circuito" 
+            reference="recorrido" 
+            sort={{ field: 'codigo', order: 'ASC' }}
+            alwaysOn
+          >
+            <SelectInput 
+              label="Circuito"
+              emptyText="Filtrar por recorrido..."
+              optionText={(record: any) => record ? `[${record.codigo}] - ${record.nombre}` : ''}
+              optionValue="codigo" 
+              className="w-72" 
+            />
+          </ReferenceInput>
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -125,11 +139,11 @@ export const ClienteList = () => {
             return false;
           }}
         >
-          <DataTable.Col source="codigo" label="Código" />
-          <DataTable.Col source="razon_social" label="Razón Social" />
-          <DataTable.Col source="nombre_fantasia" label="Nombre Fantasía" />
-          <DataTable.Col source="cuit" label="CUIT" />
-          <DataTable.Col source="numero_circuito" label="Circuito" />
+          <DataTable.Col source="codigo" label="Código" sortable />
+          <DataTable.Col source="razon_social" label="Razón Social" sortable={false} />
+          <DataTable.Col source="nombre_fantasia" label="Nombre Fantasía" sortable={false} />
+          <DataTable.Col source="cuit" label="CUIT" sortable={false} />
+          <DataTable.Col source="numero_circuito" label="Circuito" sortable={false} />
         </DataTable>
       </List>
 
@@ -157,7 +171,7 @@ export const ClienteList = () => {
                   <RecordField source="email" label="Email">
                     <TextField source="email" />
                   </RecordField>
-                  <RecordField source="numero_circuito" label="Número Circuito">
+                  <RecordField source="numero_circuito" label="Circuito">
                     <ReferenceField source="numero_circuito" reference="recorrido" target="codigo">
                         <TextField source="nombre" />
                     </ReferenceField>

@@ -133,7 +133,8 @@ export const getListFn = createServerFn({ method: 'GET' })
     const { resource, params } = data
     const table = getTable(resource)
     const { page, perPage } = params.pagination
-    const { field, order } = params.sort
+    const sortField = params.sort?.field || 'id'
+    const sortOrder = params.sort?.order || 'ASC'
 
     const filters = Object.entries(params.filter).map(([key, value]) => {
       if (key === 'q') return undefined;
@@ -153,7 +154,9 @@ export const getListFn = createServerFn({ method: 'GET' })
       if (table.razon_social) searchConditions.push(like(sql`lower(${table.razon_social})`, `%${searchQuery}%`));
       if (table.nombre_fantasia) searchConditions.push(like(sql`lower(${table.nombre_fantasia})`, `%${searchQuery}%`));
       if (table.cuit) searchConditions.push(like(table.cuit, `%${searchQuery}%`));
-      if (table.codigo) searchConditions.push(like(sql`cast(${table.codigo} as text)`, `%${searchQuery}%`));
+      if (table.codigo) {
+        searchConditions.push(like(sql`lower(cast(${table.codigo} as text))`, `%${searchQuery}%`));
+      }
       if (table.fecha_envio) {
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(searchQuery)) {
           const [day, month, year] = searchQuery.split('/');
@@ -172,7 +175,7 @@ export const getListFn = createServerFn({ method: 'GET' })
       .where(filters.length ? and(...filters) : undefined)
       .limit(perPage)
       .offset((page - 1) * perPage)
-      .orderBy(order === 'ASC' ? asc(table[field]) : desc(table[field]))
+      .orderBy(sortOrder === 'ASC' ? asc(table[sortField]) : desc(table[sortField]))
 
     const [countResult] = await getDb(env.DB)
       .select({ count: sql<number>`count(*)` })

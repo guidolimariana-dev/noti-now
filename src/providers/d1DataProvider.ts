@@ -12,7 +12,7 @@ const fieldLabels: Record<string, string> = {
   cuit: 'CUIT',
   telefono: 'Teléfono',
   email: 'Email',
-  numero_circuito: 'Número Circuito',
+  numero_circuito: 'Circuito',
   llamar_sn: 'Llamar S/N',
   forma_contacto: 'Forma Contacto',
 };
