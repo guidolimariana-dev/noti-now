@@ -4,6 +4,9 @@ import { mergeTranslations } from "ra-core";
 
 const customSpanishMessages = mergeTranslations(spanishMessages, {
   ra: {
+    page: {
+      dashboard: "Inicio",
+    },
     navigation: {
       page_rows_per_page: "Filas por página",
       page_range_info: "%{offsetBegin}-%{offsetEnd} de %{total}",

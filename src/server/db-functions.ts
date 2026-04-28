@@ -188,6 +188,7 @@ export const getListFn = createServerFn({ method: 'GET' })
     const [countResult] = await getDb(env.DB)
       .select({ count: sql<number>`count(*)` })
       .from(table)
+      .where(filters.length ? and(...filters) : undefined)
 
     return { data: items, total: Number(countResult.count) }
   })
