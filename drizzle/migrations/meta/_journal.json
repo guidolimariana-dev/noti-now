@@ -50,6 +50,27 @@
       "when": 1777326896413,
       "tag": "0006_make_cliente_codigo_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1777648326048,
+      "tag": "0007_update_recordatorio_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1777649293907,
+      "tag": "0008_change_recordatorio_fk_to_codigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1777655380384,
+      "tag": "0009_add_mensaje_to_recordatorio",
+      "breakpoints": true
     }
   ]
 }

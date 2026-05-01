@@ -165,13 +165,13 @@ export const getListFn = createServerFn({ method: 'GET' })
       if (table.codigo) {
         searchConditions.push(like(sql`lower(cast(${table.codigo} as text))`, `%${searchQuery}%`));
       }
-      if (table.fecha_envio) {
+      if (table.envio_mensaje) {
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(searchQuery)) {
           const [day, month, year] = searchQuery.split('/');
           const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${formattedDate}%`));
+          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.envio_mensaje} / 1000, 'unixepoch'))`, `%${formattedDate}%`));
         } else {
-          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.fecha_envio} / 1000, 'unixepoch'))`, `%${searchQuery}%`));
+          searchConditions.push(like(sql`strftime('%Y-%m-%d', datetime(${table.envio_mensaje} / 1000, 'unixepoch'))`, `%${searchQuery}%`));
         }
       }
       if (searchConditions.length > 0) filters.push(or(...searchConditions));

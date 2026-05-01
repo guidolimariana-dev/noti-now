@@ -25,7 +25,7 @@ export const Dashboard = () => {
     'recordatorio',
     {
       pagination: { page: 1, perPage: 10 },
-      sort: { field: 'fecha_envio', order: 'ASC' },
+      sort: { field: 'envio_mensaje', order: 'ASC' },
       filter: { estado: 'Programado' },
     }
   );
@@ -100,7 +100,7 @@ export const Dashboard = () => {
                     {recordatorios?.map((r) => (
                       <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell className="font-mono font-medium">#{r.id}</TableCell>
-                        <TableCell>{new Date(r.fecha_envio).toLocaleString('es-AR', {
+                        <TableCell>{new Date(r.envio_mensaje).toLocaleString('es-AR', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',

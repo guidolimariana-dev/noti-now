@@ -1,0 +1,2 @@
+ALTER TABLE `recordatorio` ADD `mensaje` text NOT NULL DEFAULT '';--> statement-breakpoint
+UPDATE `recordatorio` SET `mensaje` = 'Saludos (Sr./Sra./Sres.), (---). Este mensaje es para comentarles que estamos organizando nuestro próximo recorrido, entrega de mercadería para vuestra zona. La entrega será aproximadamente a partir del (L/M/M/J/V/S) (dd/mm/aaaa). Solicitamos si es de vuestro interés, hacer su pedido hasta el (dd/mm/aaaa) a las (hh:mm). Que disfrute de su día. Equipo de Comunicación GF.' WHERE `mensaje` = '';

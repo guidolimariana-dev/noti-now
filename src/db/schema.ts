@@ -135,9 +135,11 @@ export const clientes = sqliteTable("clientes", {
 
 export const recordatorio = sqliteTable("recordatorio", {
   id: integer().primaryKey({ autoIncrement: true }),
-  fecha_envio: integer({ mode: "timestamp" }).notNull(),
-  fecha_limite: integer({ mode: "timestamp" }).notNull(),
-  id_recorrido: integer().notNull().references(() => recorrido.id),
+  envio_mensaje: integer({ mode: "timestamp" }).notNull(),
+  fecha_recepcion_pedido: integer({ mode: "timestamp" }).notNull(),
+  entrega_tentativa: integer({ mode: "timestamp" }).notNull(),
+  id_recorrido: integer().notNull().references(() => recorrido.codigo),
   estado: text().notNull(),
+  mensaje: text().notNull(),
 });
 
