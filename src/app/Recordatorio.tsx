@@ -157,13 +157,6 @@ const RecordatorioActions = () => {
     );
   };
 
-  const handleResumen = () => {
-    const element = document.getElementById('clientes-resumen');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
     <div className="flex items-center gap-2">
       <Button 
@@ -176,16 +169,6 @@ const RecordatorioActions = () => {
         disabled={record.estado !== 'Programado' || isLoading}
       >
         Cancelar
-      </Button>
-      <Button 
-        size="sm"
-        onClick={(e) => {
-            e.stopPropagation();
-            handleResumen();
-        }}
-        className="bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        Resumen Clientes
       </Button>
       <EditButton />
     </div>
@@ -430,7 +413,7 @@ const ClientMiniTable = ({ data }: { data: any[] }) => (
 
 export const RecordatorioCreate = () => (
   <Create redirect="list">
-    <SimpleForm validate={validateRecordatorio} defaultValues={{ mensaje: DEFAULT_MENSAJE_TEMPLATE, estado: 'Programado' }}>
+    <SimpleForm validate={validateRecordatorio} defaultValues={{ mensaje: DEFAULT_MENSAJE_TEMPLATE }}>
       <MensajeAutoFiller />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <DateTimeInput source="envio_mensaje" label="Envío Mensaje" required />

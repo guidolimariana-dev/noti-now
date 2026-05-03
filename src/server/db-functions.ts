@@ -28,12 +28,27 @@ const normalize = (str: string) => {
   return normalized;
 }
 
-function transformData(table: any, data: any): any {
+function transformData(table: any, data: any, resource?: string): any {
   const transformed = { ...data };
   
   // Remove id if it's null or undefined to let DB handle auto-increment
   if (transformed.id === null || transformed.id === undefined) {
     delete transformed.id;
+  }
+
+  // Dynamic status logic for Recordatorio
+  if (resource === 'recordatorio') {
+    if (transformed.estado !== 'Cancelado') {
+      // Default to Programado if not already set
+      if (!transformed.estado) transformed.estado = 'Programado';
+      
+      if (transformed.envio_mensaje) {
+        const envioDate = new Date(transformed.envio_mensaje);
+        if (!isNaN(envioDate.getTime())) {
+          transformed.estado = envioDate > new Date() ? 'Programado' : 'Enviado';
+        }
+      }
+    }
   }
 
   for (const key in table) {
@@ -68,11 +83,15 @@ function transformData(table: any, data: any): any {
   return transformed;
 }
 
-function findMissingRequiredField(table: any, data: any, isUpdate: boolean): string | undefined {
+function findMissingRequiredField(table: any, data: any, isUpdate: boolean, resource?: string): string | undefined {
   for (const key in table) {
     const column = table[key];
     if (column && typeof column === 'object' && (column.columnType || column.name)) {
       if (key === 'id') continue;
+      
+      // Skip estado for recordatorio as it is handled automatically on the server
+      if (resource === 'recordatorio' && key === 'estado') continue;
+
       if (column.notNull) {
         const value = data[key];
         const isPresent = key in data;
@@ -185,6 +204,12 @@ export const getListFn = createServerFn({ method: 'GET' })
       .offset((page - 1) * perPage)
       .orderBy(sortOrder === 'ASC' ? asc(table[sortField]) : desc(table[sortField]))
 
+    if (resource === 'recorrido') {
+      items.forEach((item: any) => {
+        item.id = item.codigo;
+      });
+    }
+
     const [countResult] = await getDb(env.DB)
       .select({ count: sql<number>`count(*)` })
       .from(table)
@@ -199,11 +224,17 @@ export const getOneFn = createServerFn({ method: 'GET' })
     const { resource, params } = data
     const table = getTable(resource)
     const condition = resource === 'recorrido' 
-      ? or(eq(table.id, params.id), eq(table.codigo, params.id))
+      ? eq(table.codigo, params.id)
       : eq(table.id, params.id);
     const [item] = await getDb(env.DB).select().from(table).where(condition)
     if (!item) throw new Error('Not found')
-    return { data: item }
+    
+    const transformedItem = { ...item };
+    if (resource === 'recorrido') {
+      transformedItem.id = item.codigo;
+    }
+    
+    return { data: transformedItem }
   })
 
 export const getManyFn = createServerFn({ method: 'GET' })
@@ -212,9 +243,16 @@ export const getManyFn = createServerFn({ method: 'GET' })
     const { resource, params } = data
     const table = getTable(resource)
     const condition = resource === 'recorrido'
-      ? or(inArray(table.id, params.ids as any[]), inArray(table.codigo, params.ids as any[]))
+      ? inArray(table.codigo, params.ids as any[])
       : inArray(table.id, params.ids as any[]);
     const items = await getDb(env.DB).select().from(table).where(condition);
+    
+    if (resource === 'recorrido') {
+      items.forEach((item: any) => {
+        item.id = item.codigo;
+      });
+    }
+    
     return { data: items }
   })
 
@@ -253,11 +291,17 @@ export const createFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-    const missingField = findMissingRequiredField(table, params.data, false);
+    const transformedData = transformData(table, params.data, resource);
+    const missingField = findMissingRequiredField(table, transformedData, false, resource);
     if (missingField) throw new Error(`VALIDATION_ERROR:required:${missingField}`);
-    const transformedData = transformData(table, params.data);
-    const items: {id: number}[] = await getDb(env.DB).insert(table).values(transformedData).returning({ id: table.id })
-    return { data: items[0] }
+    const returningFields: any = { id: table.id };
+    if (resource === 'recorrido') returningFields.codigo = table.codigo;
+    const items = await getDb(env.DB).insert(table).values(transformedData).returning(returningFields)
+    const item: any = items[0];
+    if (resource === 'recorrido') {
+      item.id = item.codigo;
+    }
+    return { data: item }
   })
 
 export const createManyFn = createServerFn({ method: 'POST' })
@@ -280,7 +324,7 @@ export const createManyFn = createServerFn({ method: 'POST' })
         if (tableKey) cleanItem[tableKey] = item[itemKey];
       });
       const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
-      return transformData(table, dataWithDefaults);
+      return transformData(table, dataWithDefaults, resource);
     }).filter(item => Object.keys(item).length > 0);
     if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes en el archivo.');
     const chunkSize = 50;
@@ -373,7 +417,7 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
           }
         });
         const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
-        return transformData(table, dataWithDefaults);
+        return transformData(table, dataWithDefaults, resource);
       }).filter(item => Object.keys(item).length > 0);
       if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes.');
       const chunkSize = 50;
@@ -414,11 +458,20 @@ export const updateFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-    const missingField = findMissingRequiredField(table, params.data, true);
+    const transformedData = transformData(table, params.data, resource);
+    const missingField = findMissingRequiredField(table, transformedData, true, resource);
     if (missingField) throw new Error(`VALIDATION_ERROR:required:${missingField}`);
-    const transformedData = transformData(table, params.data);
-    const updatedItems = await getDb(env.DB).update(table).set(transformedData).where(eq(table.id, params.id)).returning({ id: table.id })
-    return { data: updatedItems[0] }
+    
+    const condition = resource === 'recorrido' 
+      ? eq(table.codigo, params.id)
+      : eq(table.id, params.id);
+
+    const updatedItems = await getDb(env.DB).update(table).set(transformedData).where(condition).returning({ id: table.id })
+    const item: any = updatedItems[0];
+    if (resource === 'recorrido') {
+       item.id = params.id;
+    }
+    return { data: item }
   })
 
 export const updateManyFn = createServerFn({ method: 'POST' })
@@ -426,8 +479,11 @@ export const updateManyFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-    const transformedData = transformData(table, params.data);
-    await getDb(env.DB).update(table).set(transformedData).where(inArray(table.id, params.ids as any[]))
+    const transformedData = transformData(table, params.data, resource);
+    const condition = resource === 'recorrido'
+      ? inArray(table.codigo, params.ids as any[])
+      : inArray(table.id, params.ids as any[]);
+    await getDb(env.DB).update(table).set(transformedData).where(condition)
     return { data: params.ids }
   })
 
@@ -436,8 +492,15 @@ export const deleteFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-    const deletedItems = await getDb(env.DB).delete(table).where(eq(table.id, params.id)).returning({ id: table.id })
-    return { data: deletedItems[0] }
+    const condition = resource === 'recorrido' 
+      ? eq(table.codigo, params.id)
+      : eq(table.id, params.id);
+    const deletedItems = await getDb(env.DB).delete(table).where(condition).returning({ id: table.id })
+    const item: any = deletedItems[0];
+    if (resource === 'recorrido') {
+      item.id = params.id;
+    }
+    return { data: item }
   })
 
 export const deleteManyFn = createServerFn({ method: 'POST' })
@@ -445,6 +508,9 @@ export const deleteManyFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { resource, params } = data
     const table = getTable(resource)
-    await getDb(env.DB).delete(table).where(inArray(table.id, params.ids as any[]))
+    const condition = resource === 'recorrido'
+      ? inArray(table.codigo, params.ids as any[])
+      : inArray(table.id, params.ids as any[]);
+    await getDb(env.DB).delete(table).where(condition)
     return { data: params.ids }
   })
