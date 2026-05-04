@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "notinow-notifications",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "src/server/notifications-worker.ts",
+	"vars": {
+		"MAILGUN_API_KEY": "YOUR_MAILGUN_API_KEY",
+		"MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
+		"TWILIO_ACCOUNT_SID": "YOUR_TWILIO_ACCOUNT_SID",
+		"TWILIO_AUTH_TOKEN": "YOUR_TWILIO_AUTH_TOKEN",
+		"TWILIO_WHATSAPP_NUMBER": "YOUR_TWILIO_WHATSAPP_NUMBER"
+	},
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "base_admin",
+			"migrations_dir": "./drizzle/migrations"
+		}
+	]
+}
