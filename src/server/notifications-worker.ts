@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 import * as schema from '../db/schema';
-import { eq, and, lte } from 'drizzle-orm';
+import { eq, and, lte, sql } from 'drizzle-orm';
 import { sendEmail, sendWhatsApp } from '../lib/notifications';
 
 export interface Env {
@@ -31,15 +31,17 @@ export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     const db = getDb(env.DB);
     const now = new Date();
+    const nowTimestamp = now.getTime();
 
     // 1. Fetch pending notifications that are scheduled and ready to be sent
+    // We use a raw SQL comparison to avoid Drizzle's automatic Date-to-Integer mapping issues in D1
     const pendingRecordatorios = await db
       .select()
       .from(schema.recordatorio)
       .where(
         and(
           eq(schema.recordatorio.estado, 'Programado'),
-          lte(schema.recordatorio.envio_mensaje, now)
+          sql`${schema.recordatorio.envio_mensaje} <= ${nowTimestamp}`
         )
       );
 

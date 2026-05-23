@@ -22,8 +22,7 @@
 		{
 			"binding": "DB",
 			"database_name": "base_admin",
-			"migrations_dir": "./drizzle/migrations",
-			"database_id": "b68d4c18-cb92-438d-9c9c-c984fea4af5d"
+			"migrations_dir": "./drizzle/migrations"
 		}
 	]
 }

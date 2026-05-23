@@ -319,15 +319,23 @@ export const createManyFn = createServerFn({ method: 'POST' })
 
       // CUIT validation for Clientes
       if (resource === 'clientes') {
-        const cuit = String(cleanItem.cuit || '');
+        const cuitRaw = String(cleanItem.cuit || '');
+        const cuitClean = cuitRaw.replace(/\D/g, '');
         const validPrefixes = ['20', '27', '23', '24', '30', '33', '34'];
-        if (!validPrefixes.some(prefix => cuit.startsWith(prefix))) {
+        if (!validPrefixes.some(prefix => cuitClean.startsWith(prefix))) {
           return null;
         }
       }
 
       const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
-      return transformData(table, dataWithDefaults, resource);
+      const transformed = transformData(table, dataWithDefaults, resource);
+      
+      // Ensure ID is not sent as null to allow autoincrement
+      if (transformed && 'id' in transformed) {
+        delete transformed.id;
+      }
+      
+      return transformed;
     }).filter((item: any) => item !== null && Object.keys(item).length > 0);
     if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes en el archivo.');
     const chunkSize = 50;
@@ -422,15 +430,23 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
 
         // CUIT validation for Clientes
         if (resource === 'clientes') {
-          const cuit = String(cleanItem.cuit || '');
+          const cuitRaw = String(cleanItem.cuit || '');
+          const cuitClean = cuitRaw.replace(/\D/g, '');
           const validPrefixes = ['20', '27', '23', '24', '30', '33', '34'];
-          if (!validPrefixes.some(prefix => cuit.startsWith(prefix))) {
+          if (!validPrefixes.some(prefix => cuitClean.startsWith(prefix))) {
             return null;
           }
         }
 
         const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
-        return transformData(table, dataWithDefaults, resource);
+        const transformed = transformData(table, dataWithDefaults, resource);
+        
+        // Ensure ID is not sent as null to allow autoincrement
+        if (transformed && 'id' in transformed) {
+          delete transformed.id;
+        }
+        
+        return transformed;
       }).filter((item: any) => item !== null && Object.keys(item).length > 0);
       if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes.');
       const chunkSize = 50;
