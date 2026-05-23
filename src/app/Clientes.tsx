@@ -14,6 +14,7 @@ import {
   TextField,
   NumberField,
   SelectInput,
+  AutocompleteInput,
   ReferenceInput,
   ReferenceField,
   RecordField,
@@ -114,11 +115,12 @@ export const ClienteList = () => {
             source="numero_circuito" 
             reference="recorrido" 
             sort={{ field: 'codigo', order: 'ASC' }}
+            perPage={1000}
             alwaysOn
           >
-            <SelectInput 
+            <AutocompleteInput 
               label="Circuito"
-              emptyText="Filtrar por recorrido..."
+              placeholder="Filtrar por recorrido..."
               optionText={(record: any) => record ? `[${record.codigo}] - ${record.nombre}` : ''}
               optionValue="codigo" 
               className="w-72" 
@@ -143,7 +145,11 @@ export const ClienteList = () => {
           <DataTable.Col source="razon_social" label="Razón Social" sortable={false} />
           <DataTable.Col source="nombre_fantasia" label="Nombre Fantasía" sortable={false} />
           <DataTable.Col source="cuit" label="CUIT" sortable={false} />
-          <DataTable.Col source="numero_circuito" label="Circuito" sortable={false} />
+          <DataTable.Col source="numero_circuito" label="Circuito" sortable={false}>
+            <ReferenceField source="numero_circuito" reference="recorrido" target="codigo" link={false}>
+              <TextField source="nombre" />
+            </ReferenceField>
+          </DataTable.Col>
         </DataTable>
       </List>
 
@@ -179,9 +185,6 @@ export const ClienteList = () => {
                   <RecordField source="llamar_sn" label="Llamar S/N">
                     <TextField source="llamar_sn" />
                   </RecordField>
-                  <RecordField source="forma_contacto" label="Forma Contacto">
-                    <TextField source="forma_contacto" />
-                  </RecordField>
                 </SimpleShowLayout>
               </div>
               <div className="mt-auto pt-6 flex justify-end border-t">
@@ -216,7 +219,6 @@ export const ClienteCreate = () => (
         ]}
         required
       />
-      <TextInput source="forma_contacto" required />
     </SimpleForm>
   </Create>
 )
@@ -242,7 +244,6 @@ export const ClienteEdit = () => (
         ]}
         required
       />
-      <TextInput source="forma_contacto" required />
     </SimpleForm>
   </Edit>
 )
@@ -260,7 +261,6 @@ export const ClienteShow = () => (
             <TextField source="nombre" />
         </ReferenceField>
         <TextField source="llamar_sn" />
-        <TextField source="forma_contacto" />
     </SimpleShowLayout>
   </Show>
 )

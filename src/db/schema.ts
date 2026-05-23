@@ -130,7 +130,6 @@ export const clientes = sqliteTable("clientes", {
   email: text().notNull(),
   numero_circuito: integer().notNull().references(() => recorrido.codigo),
   llamar_sn: text().notNull(),
-  forma_contacto: text().notNull(),
 });
 
 export const recordatorio = sqliteTable("recordatorio", {

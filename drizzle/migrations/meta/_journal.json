@@ -71,6 +71,13 @@
       "when": 1777655380384,
       "tag": "0009_add_mensaje_to_recordatorio",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1779558733351,
+      "tag": "0010_remove_forma_contacto",
+      "breakpoints": true
     }
   ]
 }

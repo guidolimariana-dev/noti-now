@@ -8,8 +8,10 @@ import {
   Show,
   SimpleForm,
   SelectInput,
+  AutocompleteInput,
   TextInput,
   DateTimeInput,
+  DateInput,
   TextField,
   DateField,
   ReferenceField,
@@ -44,8 +46,8 @@ import { MessageSquare } from 'lucide-react';
 
 const DEFAULT_MENSAJE_TEMPLATE = "Saludos (Sr./Sra./Sres.), (---). Este mensaje es para comentarles que estamos organizando nuestro próximo recorrido, entrega de mercadería para vuestra zona. La entrega será aproximadamente a partir del (L/M/M/J/V/S) (dd/mm/aaaa). Solicitamos si es de vuestro interés, hacer su pedido hasta el (dd/mm/aaaa) a las (hh:mm). Que disfrute de su día. Equipo de Comunicación GF.";
 
-const getDayAbbreviation = (date: Date) => {
-  const days = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const getDayName = (date: Date) => {
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   return days[date.getDay()];
 };
 
@@ -53,7 +55,7 @@ const formatMensaje = (template: string, entregaDate: Date | null, limiteDate: D
   let result = template;
   
   if (entregaDate && !isNaN(entregaDate.getTime())) {
-    const dayName = getDayAbbreviation(entregaDate);
+    const dayName = getDayName(entregaDate);
     const dateStr = format(entregaDate, 'dd/MM/yyyy');
     result = result.replace('(L/M/M/J/V/S)', dayName);
     result = result.replace('(dd/mm/aaaa)', dateStr);
@@ -202,14 +204,15 @@ export const RecordatorioList = () => (
       <ReferenceInput 
         source="id_recorrido" 
         reference="recorrido"
-        perPage={100}
+        sort={{ field: 'codigo', order: 'ASC' }}
+        perPage={1000}
         alwaysOn
       >
-        <SelectInput 
+        <AutocompleteInput 
           label="Recorrido" 
-          optionText="nombre" 
+          placeholder="Filtrar por recorrido..."
+          optionText={(record: any) => record && record.codigo !== undefined ? `[${record.codigo}] - ${record.nombre}` : ''} 
           optionValue="codigo"
-          emptyText="Filtrar por recorrido..."
           className="w-64"
         />
       </ReferenceInput>
@@ -244,7 +247,7 @@ export const RecordatorioList = () => (
          <DateField source="fecha_recepcion_pedido" showTime />
       </DataTable.Col>
       <DataTable.Col source="entrega_tentativa" label="Entrega Tentativa" disableSort={true}>
-         <DateField source="entrega_tentativa" showTime />
+         <DateField source="entrega_tentativa" />
       </DataTable.Col>
       <DataTable.Col source="estado" label="Estado" disableSort={true} />
       <DataTable.Col source="id_recorrido" label="Recorrido" disableSort={true}>
@@ -288,13 +291,7 @@ const RecordatorioShowLayout = () => {
   if (isLoadingRecord || !record || !recorrido) return <Loading />;
   if (isLoadingClientes) return <Loading />;
 
-  const clientesAContactar = clientes?.filter(c => 
-    c.llamar_sn === 'S' && 
-    c.forma_contacto && 
-    c.forma_contacto.trim() !== '' &&
-    (c.forma_contacto.toLowerCase() === 'whatsapp' ? (c.telefono && c.telefono.trim() !== '') : true) &&
-    (c.forma_contacto.toLowerCase() === 'mail' ? (c.email && c.email.trim() !== '') : true)
-  ) || [];
+  const clientesAContactar = clientes?.filter(c => c.llamar_sn === 'S') || [];
 
   const clientesSinComunicacion = clientes?.filter(c => c.llamar_sn === 'N') || [];
   const clientesSinTelefono = clientes?.filter(c => !c.telefono || c.telefono.trim() === '') || [];
@@ -313,7 +310,7 @@ const RecordatorioShowLayout = () => {
               <DateField source="fecha_recepcion_pedido" showTime className="text-sm font-bold" />
             </RecordField>
             <RecordField source="entrega_tentativa" label="ENTREGA TENTATIVA" className="min-w-[150px]">
-              <DateField source="entrega_tentativa" showTime className="text-sm font-bold" />
+              <DateField source="entrega_tentativa" className="text-sm font-bold" />
             </RecordField>
             <RecordField source="id_recorrido" label="RECORRIDO" className="min-w-[200px]">
                <span className="text-sm font-bold">[{recorrido.codigo}] - {recorrido.nombre}</span>
@@ -418,7 +415,7 @@ export const RecordatorioCreate = () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <DateTimeInput source="envio_mensaje" label="Envío Mensaje" required />
         <DateTimeInput source="fecha_recepcion_pedido" label="Fecha Recepción Pedido" required />
-        <DateTimeInput source="entrega_tentativa" label="Entrega Tentativa" required />
+        <DateInput source="entrega_tentativa" label="Entrega Tentativa" required />
         <ReferenceInput 
           source="id_recorrido" 
           reference="recorrido" 
@@ -446,7 +443,7 @@ export const RecordatorioEdit = () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <DateTimeInput source="envio_mensaje" label="Envío Mensaje" required />
         <DateTimeInput source="fecha_recepcion_pedido" label="Fecha Recepción Pedido" required />
-        <DateTimeInput source="entrega_tentativa" label="Entrega Tentativa" required />
+        <DateInput source="entrega_tentativa" label="Entrega Tentativa" required />
         <ReferenceInput 
           source="id_recorrido" 
           reference="recorrido" 

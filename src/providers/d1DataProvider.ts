@@ -16,7 +16,6 @@ const fieldLabels: Record<string, string> = {
   email: 'Email',
   numero_circuito: 'Circuito',
   llamar_sn: 'Llamar S/N',
-  forma_contacto: 'Forma Contacto',
 };
 
 const formatErrorMessage = (error: any) => {

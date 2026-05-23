@@ -57,9 +57,22 @@ export const Dashboard = () => {
     }
   );
 
-  if (loadingRecordatorios || loadingSinTelefono || loadingSinMail || loadingSinComu) {
+  // Fetch all recorridos to map names
+  const { data: recorridosResponse, isLoading: loadingRecorridos } = useGetList(
+    'recorrido',
+    { pagination: { page: 1, perPage: 1000 } }
+  );
+
+  if (loadingRecordatorios || loadingSinTelefono || loadingSinMail || loadingSinComu || loadingRecorridos) {
     return <Loading />;
   }
+
+  const recorridos = recorridosResponse || [];
+
+  const getRecorridoNombre = (codigo: number) => {
+    const r = recorridos.find(rec => rec.codigo === codigo);
+    return r ? r.nombre : `Recorrido ${codigo}`;
+  };
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
@@ -90,28 +103,30 @@ export const Dashboard = () => {
             <CardContent className="pt-4">
               <div className="rounded-md border overflow-hidden bg-background">
                 <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead className="w-[100px]">ID</TableHead>
-                      <TableHead>Fecha de Envío</TableHead>
-                    </TableRow>
-                  </TableHeader>
                   <TableBody>
                     {recordatorios?.map((r) => (
                       <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-mono font-medium">#{r.id}</TableCell>
-                        <TableCell>{new Date(r.envio_mensaje).toLocaleString('es-AR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-bold text-sm">
+                              {getRecorridoNombre(r.id_recorrido)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(r.envio_mensaje).toLocaleString('es-AR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {recordatorios?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={2} className="h-24 text-center text-muted-foreground italic">
+                        <TableCell className="h-24 text-center text-muted-foreground italic">
                           No hay recordatorios programados.
                         </TableCell>
                       </TableRow>

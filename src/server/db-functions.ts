@@ -123,14 +123,7 @@ function fillMissingFields(resource: string, table: any, data: any): any {
       result['llamar_sn'] = 'S';
     }
 
-    // 2. Handle Forma Contacto based on Llamar S/N
-    if (result['llamar_sn'] === 'N') {
-      result['forma_contacto'] = '-';
-    } else if (!result['forma_contacto'] || result['forma_contacto'].trim() === '') {
-      result['forma_contacto'] = 'No especificado';
-    }
-
-    // 3. Handle Nombre Fantasia
+    // 2. Handle Nombre Fantasia
     if (!result['nombre_fantasia'] || result['nombre_fantasia'].trim() === '') {
       result['nombre_fantasia'] = result['razon_social'] || '';
     }
@@ -323,9 +316,19 @@ export const createManyFn = createServerFn({ method: 'POST' })
         const tableKey = columnMap[normalizedItemKey];
         if (tableKey) cleanItem[tableKey] = item[itemKey];
       });
+
+      // CUIT validation for Clientes
+      if (resource === 'clientes') {
+        const cuit = String(cleanItem.cuit || '');
+        const validPrefixes = ['20', '27', '23', '24', '30', '33', '34'];
+        if (!validPrefixes.some(prefix => cuit.startsWith(prefix))) {
+          return null;
+        }
+      }
+
       const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
       return transformData(table, dataWithDefaults, resource);
-    }).filter(item => Object.keys(item).length > 0);
+    }).filter((item: any) => item !== null && Object.keys(item).length > 0);
     if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes en el archivo.');
     const chunkSize = 50;
     for (let i = 0; i < transformedData.length; i += chunkSize) {
@@ -416,9 +419,19 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
             cleanItem[tableKey] = value;
           }
         });
+
+        // CUIT validation for Clientes
+        if (resource === 'clientes') {
+          const cuit = String(cleanItem.cuit || '');
+          const validPrefixes = ['20', '27', '23', '24', '30', '33', '34'];
+          if (!validPrefixes.some(prefix => cuit.startsWith(prefix))) {
+            return null;
+          }
+        }
+
         const dataWithDefaults = fillMissingFields(resource, table, cleanItem);
         return transformData(table, dataWithDefaults, resource);
-      }).filter(item => Object.keys(item).length > 0);
+      }).filter((item: any) => item !== null && Object.keys(item).length > 0);
       if (transformedData.length === 0) throw new Error('No se encontraron columnas coincidentes.');
       const chunkSize = 50;
       for (let i = 0; i < transformedData.length; i += chunkSize) {
@@ -439,7 +452,6 @@ export const processFileFromR2Fn = createServerFn({ method: 'POST' })
                 email: sql`excluded.email`,
                 numero_circuito: sql`excluded.numero_circuito`,
                 llamar_sn: sql`excluded.llamar_sn`,
-                forma_contacto: sql`excluded.forma_contacto`,
               }
             });
         } else {

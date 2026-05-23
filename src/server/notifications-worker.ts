@@ -13,6 +13,21 @@ export interface Env {
 }
 
 export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    try {
+      // Create a dummy ScheduledEvent
+      const dummyEvent: ScheduledEvent = {
+        cron: "manual",
+        scheduledTime: Date.now(),
+        type: "scheduled",
+      };
+      await this.scheduled(dummyEvent, env, ctx);
+      return new Response("Proceso de notificaciones ejecutado manualmente con éxito.", { status: 200 });
+    } catch (error) {
+      return new Response(`Error al ejecutar el proceso: ${error}`, { status: 500 });
+    }
+  },
+
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     const db = getDb(env.DB);
     const now = new Date();
@@ -43,37 +58,82 @@ export default {
           .where(eq(schema.clientes.numero_circuito, recordatorio.id_recorrido));
 
         // Filter clients based on the same logic as the frontend
-        const recipients = allClients.filter(c => 
-          c.llamar_sn === 'S' && 
-          c.forma_contacto && 
-          c.forma_contacto.trim() !== '' &&
-          (c.forma_contacto.toLowerCase().includes('whatsapp') ? (c.telefono && c.telefono.trim() !== '') : true) &&
-          (c.forma_contacto.toLowerCase().includes('mail') || c.forma_contacto.toLowerCase().includes('email') ? (c.email && c.email.trim() !== '') : true)
-        );
+        const recipients = allClients.filter(c => c.llamar_sn === 'S');
 
         const results = await Promise.allSettled(
-          recipients.map(async (cliente) => {
-            const forma = cliente.forma_contacto.toLowerCase();
-            
-            if ((forma.includes('mail') || forma.includes('email')) && cliente.email) {
-              return sendEmail({
+          recipients.flatMap((cliente) => {
+            // Logic for dynamic greeting based on CUIT
+            const cuitPrefix = cliente.cuit ? cliente.cuit.substring(0, 2) : '';
+            let title = '';
+            let displayName = cliente.razon_social;
+
+            if (cuitPrefix === '20') {
+              title = 'Sr.';
+            } else if (cuitPrefix === '27') {
+              title = 'Sra.';
+            } else if (cuitPrefix === '23' || cuitPrefix === '24') {
+              title = 'Sr./Sra.';
+            } else if (['30', '33', '34'].includes(cuitPrefix)) {
+              title = 'Sres.';
+              displayName = cliente.nombre_fantasia;
+            }
+
+            // Personalization logic using placeholders
+            let personalizedMessage = recordatorio.mensaje;
+            const titlePlaceholder = '(Sr./Sra./Sres.)';
+            const namePlaceholder = '(---)';
+            const dayPlaceholder = '(L/M/M/J/V/S)';
+
+            const hasTitlePlaceholder = personalizedMessage.includes(titlePlaceholder);
+            const hasNamePlaceholder = personalizedMessage.includes(namePlaceholder);
+            const hasDayPlaceholder = personalizedMessage.includes(dayPlaceholder);
+
+            if (hasTitlePlaceholder || hasNamePlaceholder || hasDayPlaceholder) {
+              if (hasTitlePlaceholder) {
+                personalizedMessage = personalizedMessage.replace(titlePlaceholder, title || '');
+              }
+              if (hasNamePlaceholder) {
+                personalizedMessage = personalizedMessage.replace(namePlaceholder, displayName);
+              }
+              if (hasDayPlaceholder && recordatorio.entrega_tentativa) {
+                const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const deliveryDate = new Date(recordatorio.entrega_tentativa);
+                const dayName = days[deliveryDate.getDay()];
+                personalizedMessage = personalizedMessage.replace(dayPlaceholder, dayName);
+              }
+              // Clean up double spaces that might result from empty title replacement
+              personalizedMessage = personalizedMessage.replace(/\s\s+/g, ' ').trim();
+            } else {
+              // Fallback: prepend full greeting if no placeholders are found
+              const fullGreeting = title ? `${title} ${displayName}` : displayName;
+              personalizedMessage = `${fullGreeting}: ${personalizedMessage}`;
+            }
+
+            const notifications = [];
+
+            // Attempt to send via Email if address is present
+            if (cliente.email && cliente.email.trim() !== '') {
+              notifications.push(sendEmail({
                 to: cliente.email,
                 subject: 'Recordatorio NotiNow',
-                text: recordatorio.mensaje,
+                text: personalizedMessage,
                 apiKey: env.MAILGUN_API_KEY,
                 domain: env.MAILGUN_DOMAIN,
-              });
-            } else if (forma.includes('whatsapp') && cliente.telefono) {
-              // Ensure phone number has international format for Twilio if needed, 
-              // or assume it's already stored correctly.
-              return sendWhatsApp({
+              }));
+            }
+
+            // Attempt to send via WhatsApp if phone is present
+            if (cliente.telefono && cliente.telefono.trim() !== '') {
+              notifications.push(sendWhatsApp({
                 to: cliente.telefono,
-                message: recordatorio.mensaje,
+                message: personalizedMessage,
                 accountSid: env.TWILIO_ACCOUNT_SID,
                 authToken: env.TWILIO_AUTH_TOKEN,
                 from: env.TWILIO_WHATSAPP_NUMBER,
-              });
+              }));
             }
+
+            return notifications;
           })
         );
 
