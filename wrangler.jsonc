@@ -31,7 +31,7 @@
 		{
 			"binding": "DB",
 			"database_name": "base_admin",
-      "migrations_dir": "./drizzle/migrations"
+			"migrations_dir": "./drizzle/migrations"
 		}
 	],
   "r2_buckets": [

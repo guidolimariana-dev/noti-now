@@ -3,12 +3,16 @@ export async function sendEmail({
   to,
   subject,
   text,
+  template,
+  variables,
   apiKey,
   domain,
 }: {
   to: string;
   subject: string;
-  text: string;
+  text?: string;
+  template?: string;
+  variables?: Record<string, any>;
   apiKey: string;
   domain: string;
 }) {
@@ -17,7 +21,17 @@ export async function sendEmail({
   formData.append('from', `NotiNow <mailgun@${domain}>`);
   formData.append('to', to);
   formData.append('subject', subject);
-  formData.append('text', text);
+  
+  if (template) {
+    formData.append('template', template);
+    if (variables) {
+      formData.append('t:variables', JSON.stringify(variables));
+    }
+  }
+
+  if (text) {
+    formData.append('text', text);
+  }
 
   const response = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
     method: 'POST',
