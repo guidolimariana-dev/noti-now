@@ -248,20 +248,19 @@ export type DateInputProps = InputProps & {
 } & Omit<React.ComponentProps<"input">, "label" | "defaultValue">;
 
 /**
- * Convert Date object to String, using the local timezone
+ * Convert Date object to String, using UTC to avoid timezone shifts
  *
  * @param {Date} value value to convert
  * @returns {String} A standardized date (yyyy-MM-dd), to be passed to an <input type="date" />
  */
 const convertDateToString = (value: Date) => {
-  if (!(value instanceof Date) || typeof value.getTime !== 'function' || isNaN(value.getDate())) return "";
-  const localDate = new Date(value.getTime());
-  const pad = "00";
-  const yyyy = localDate.getFullYear().toString();
-  const MM = (localDate.getMonth() + 1).toString();
-  const dd = localDate.getDate().toString();
-  return `${yyyy}-${(pad + MM).slice(-2)}-${(pad + dd).slice(-2)}`;
+  if (!(value instanceof Date) || typeof value.getTime !== 'function' || isNaN(value.getTime())) return "";
+  const yyyy = value.getUTCFullYear().toString();
+  const MM = (value.getUTCMonth() + 1).toString().padStart(2, '0');
+  const dd = value.getUTCDate().toString().padStart(2, '0');
+  return `${yyyy}-${MM}-${dd}`;
 };
+
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 

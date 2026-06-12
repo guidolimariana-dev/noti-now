@@ -21,7 +21,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { House, List, Shell } from "lucide-react";
+import { House, List } from "lucide-react";
 
 /**
  * Navigation sidebar displaying menu items, allowing users to navigate between different sections of the application.
@@ -51,11 +51,10 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className="data-[slot=sidebar-menu-button]:!p-0 h-20 hover:bg-transparent active:bg-transparent"
             >
-              <Link to="/">
-                <Shell className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+              <Link to="/" className="flex items-center justify-center w-full h-full">
+                <img src="/logo.png" alt="NotiNow" className="h-16 w-auto aspect-[2/1] object-contain" />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

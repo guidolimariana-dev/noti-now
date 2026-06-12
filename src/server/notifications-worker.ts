@@ -132,6 +132,10 @@ export default {
               personalizedMessage = `${fullGreeting}: ${personalizedMessage}`;
             }
 
+            // Replace '//' with newlines for WhatsApp/Plaintext and <br> for HTML Email
+            const whatsappMessage = personalizedMessage.replace(/\/\//g, '\n');
+            const emailHtmlMessage = personalizedMessage.replace(/\/\//g, '<br>');
+
             const notifications = [];
 
             // Attempt to send via Email if address is present
@@ -143,9 +147,9 @@ export default {
                 template: 'notinowtemplate',
                 variables: {
                   cliente: fullGreeting.trim(),
-                  mensaje: personalizedMessage,
+                  mensaje: emailHtmlMessage,
                 },
-                text: personalizedMessage,
+                text: whatsappMessage,
                 apiKey: env.MAILGUN_API_KEY,
                 domain: env.MAILGUN_DOMAIN,
               }).then(res => {
@@ -161,7 +165,7 @@ export default {
             if (cliente.telefono && cliente.telefono.trim() !== '') {
               notifications.push(sendWhatsApp({
                 to: cliente.telefono,
-                message: personalizedMessage,
+                message: whatsappMessage,
                 accountSid: env.TWILIO_ACCOUNT_SID,
                 authToken: env.TWILIO_AUTH_TOKEN,
                 from: env.TWILIO_WHATSAPP_NUMBER,

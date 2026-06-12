@@ -44,11 +44,11 @@ import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { MessageSquare } from 'lucide-react';
 
-const DEFAULT_MENSAJE_TEMPLATE = "Saludos (Sr./Sra./Sres.), (---). Este mensaje es para comentarles que estamos organizando nuestro próximo recorrido, entrega de mercadería para vuestra zona. La entrega será aproximadamente a partir del (L/M/M/J/V/S) (dd/mm/aaaa). Solicitamos si es de vuestro interés, hacer su pedido hasta el (dd/mm/aaaa) a las (hh:mm). Que disfrute de su día. Equipo de Comunicación GF.";
+const DEFAULT_MENSAJE_TEMPLATE = "Saludos (Sr./Sra./Sres.), (---).// Este mensaje es para comentarles que estamos organizando nuestro próximo recorrido, entrega de mercadería para vuestra zona. La entrega será aproximadamente a partir del (L/M/M/J/V/S) (dd/mm/aaaa).// Solicitamos si es de vuestro interés, hacer su pedido hasta el (dd/mm/aaaa) a las (hh:mm).// Que disfrute de su día.// Equipo de Comunicación GF.";
 
 const getDayName = (date: Date) => {
   const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  return days[date.getDay()];
+  return days[date.getUTCDay()];
 };
 
 const formatMensaje = (template: string, entregaDate: Date | null, limiteDate: Date | null) => {
@@ -56,7 +56,7 @@ const formatMensaje = (template: string, entregaDate: Date | null, limiteDate: D
   
   if (entregaDate && !isNaN(entregaDate.getTime())) {
     const dayName = getDayName(entregaDate);
-    const dateStr = format(entregaDate, 'dd/MM/yyyy');
+    const dateStr = `${entregaDate.getUTCDate().toString().padStart(2, '0')}/${(entregaDate.getUTCMonth() + 1).toString().padStart(2, '0')}/${entregaDate.getUTCFullYear()}`;
     result = result.replace('(L/M/M/J/V/S)', dayName);
     result = result.replace('(dd/mm/aaaa)', dateStr);
   }
@@ -80,7 +80,8 @@ const MensajeAutoFiller = () => {
 
   useEffect(() => {
     if (!currentMensaje || currentMensaje.includes('(dd/mm/aaaa)') || currentMensaje === DEFAULT_MENSAJE_TEMPLATE) {
-      const entrega = entregaTentativa ? new Date(entregaTentativa) : null;
+      // Use UTC to avoid timezone offset issues for DateInput values
+      const entrega = entregaTentativa ? new Date(entregaTentativa + 'T00:00:00Z') : null;
       const limite = fechaRecepcionPedido ? new Date(fechaRecepcionPedido) : null;
       
       const newMensaje = formatMensaje(DEFAULT_MENSAJE_TEMPLATE, entrega, limite);
@@ -247,7 +248,7 @@ export const RecordatorioList = () => (
          <DateField source="fecha_recepcion_pedido" showTime />
       </DataTable.Col>
       <DataTable.Col source="entrega_tentativa" label="Entrega Tentativa" disableSort={true}>
-         <DateField source="entrega_tentativa" />
+         <DateField source="entrega_tentativa" options={{ timeZone: 'UTC' }} />
       </DataTable.Col>
       <DataTable.Col source="estado" label="Estado" disableSort={true} />
       <DataTable.Col source="id_recorrido" label="Recorrido" disableSort={true}>
@@ -310,7 +311,7 @@ const RecordatorioShowLayout = () => {
               <DateField source="fecha_recepcion_pedido" showTime className="text-sm font-bold" />
             </RecordField>
             <RecordField source="entrega_tentativa" label="ENTREGA TENTATIVA" className="min-w-[150px]">
-              <DateField source="entrega_tentativa" className="text-sm font-bold" />
+              <DateField source="entrega_tentativa" options={{ timeZone: 'UTC' }} className="text-sm font-bold" />
             </RecordField>
             <RecordField source="id_recorrido" label="RECORRIDO" className="min-w-[200px]">
                <span className="text-sm font-bold">[{recorrido.codigo}] - {recorrido.nombre}</span>
@@ -332,7 +333,7 @@ const RecordatorioShowLayout = () => {
         </CardHeader>
         <CardContent className="pb-4">
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80 font-medium italic">
-            {record.mensaje || "Contenido no disponible (Verifique si el registro tiene el campo 'mensaje' poblado)"}
+            {(record.mensaje || "").replace(/\s?\/\/\s?/g, '\n') || "Contenido no disponible (Verifique si el registro tiene el campo 'mensaje' poblado)"}
           </p>
         </CardContent>
       </Card>
